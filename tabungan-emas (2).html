@@ -1,0 +1,1362 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Tabungan Emas">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#14110B">
+<title>Buku Tabungan Emas</title>
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%2314110B'/%3E%3Ccircle cx='50' cy='50' r='30' fill='none' stroke='%23C9A227' stroke-width='4'/%3E%3Ctext x='50' y='60' font-size='34' text-anchor='middle' fill='%23E8C468' font-family='Georgia,serif'%3EAu%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#14110B;
+    --bg-2:#0F0C08;
+    --surface:#1D1810;
+    --surface-2:#241E14;
+    --border:#3A3120;
+    --border-soft:#2A2417;
+    --gold:#C9A227;
+    --gold-bright:#E8C468;
+    --ivory:#EFE7D6;
+    --muted:#A89B7E;
+    --green:#7A9B7E;
+    --rust:#C06B4D;
+    --radius:14px;
+    --topbar-h:56px;
+    --sidebar-w:266px;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; padding:0;}
+  body{
+    background:
+      radial-gradient(ellipse 900px 500px at 50% -10%, #241d10 0%, transparent 60%),
+      var(--bg);
+    color:var(--ivory);
+    font-family:'Inter',-apple-system,sans-serif;
+    min-height:100vh;
+  }
+
+  /* ---------- TOP BAR ---------- */
+  .topbar{
+    position:sticky; top:0; z-index:30;
+    height:calc(var(--topbar-h) + env(safe-area-inset-top));
+    padding-top:env(safe-area-inset-top);
+    display:flex; align-items:center; gap:12px;
+    padding-left:14px; padding-right:14px;
+    background:rgba(20,17,11,.92);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--border-soft);
+  }
+  .hamburger{
+    width:38px; height:38px; border-radius:9px; border:1px solid var(--border);
+    background:var(--surface); display:flex; align-items:center; justify-content:center;
+    cursor:pointer; flex-shrink:0;
+  }
+  .hamburger svg{width:18px; height:18px; stroke:var(--gold-bright);}
+  .topbar-title{font-family:'Fraunces',serif; font-weight:600; font-size:17px; color:var(--ivory);}
+  .topbar-seal{
+    margin-left:auto; width:30px; height:30px; border-radius:50%; border:1.5px solid var(--gold);
+    display:flex; align-items:center; justify-content:center; font-family:'Fraunces',serif;
+    font-style:italic; font-size:12px; color:var(--gold-bright); flex-shrink:0;
+  }
+
+  .storage-banner{
+    display:none; font-size:11.5px; color:var(--rust); text-align:center; line-height:1.5;
+    padding:8px 16px; background:rgba(192,107,77,.08); border-bottom:1px solid rgba(192,107,77,.25);
+  }
+
+  /* ---------- ADD TRANSACTION MODAL ---------- */
+  .modal-backdrop{
+    position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:59;
+    opacity:0; pointer-events:none; transition:opacity .25s;
+  }
+  .modal-backdrop.open{opacity:1; pointer-events:auto;}
+
+  .modal-sheet{
+    position:fixed; left:0; right:0; bottom:0; z-index:60; max-width:520px; margin:0 auto;
+    background:linear-gradient(180deg, var(--surface-2), var(--surface));
+    border:1px solid var(--border); border-bottom:none;
+    border-top-left-radius:20px; border-top-right-radius:20px;
+    max-height:88vh; overflow-y:auto;
+    transform:translateY(100%);
+    transition:transform .32s cubic-bezier(.4,0,.2,1);
+    padding:8px 20px calc(22px + env(safe-area-inset-bottom));
+  }
+  .modal-sheet.open{transform:translateY(0);}
+  .modal-handle{width:38px; height:4px; background:var(--border); border-radius:3px; margin:8px auto 14px;}
+  .modal-header{display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;}
+  .modal-header h2{font-family:'Fraunces',serif; font-weight:600; font-size:19px; margin:0; color:var(--ivory);}
+  .modal-close{
+    width:32px; height:32px; border-radius:50%; border:1px solid var(--border);
+    background:var(--surface); color:var(--muted); font-size:14px; cursor:pointer; flex-shrink:0;
+  }
+
+  @media(min-width:860px){
+    .modal-sheet{
+      left:50%; bottom:auto; top:50%; transform:translate(-50%,-45%); opacity:0; pointer-events:none;
+      border-radius:18px; border-bottom:1px solid var(--border); width:480px; transition:transform .25s, opacity .25s;
+    }
+    .modal-sheet.open{transform:translate(-50%,-50%); opacity:1; pointer-events:auto;}
+  }
+
+  /* ---------- SIDEBAR ---------- */
+  .backdrop{
+    position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:39;
+    opacity:0; pointer-events:none; transition:opacity .25s;
+  }
+  .backdrop.open{opacity:1; pointer-events:auto;}
+
+  .sidebar{
+    position:fixed; top:0; bottom:0; left:0; width:var(--sidebar-w); z-index:40;
+    background:linear-gradient(180deg, var(--surface-2), var(--surface));
+    border-right:1px solid var(--border);
+    transform:translateX(-100%);
+    transition:transform .3s cubic-bezier(.4,0,.2,1);
+    display:flex; flex-direction:column;
+    padding-top:calc(18px + env(safe-area-inset-top));
+    padding-bottom:calc(18px + env(safe-area-inset-bottom));
+  }
+  .sidebar.open{transform:translateX(0);}
+
+  .sidebar-header{padding:0 20px 20px; border-bottom:1px solid var(--border-soft); margin-bottom:12px;}
+  .sidebar-eyebrow{
+    font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:.16em; text-transform:uppercase;
+    color:var(--gold); display:flex; align-items:center; gap:8px; margin-bottom:6px;
+  }
+  .sidebar-eyebrow::before{content:''; width:14px; height:1px; background:var(--gold);}
+  .sidebar-title{font-family:'Fraunces',serif; font-weight:600; font-size:22px; color:var(--ivory);}
+
+  .menu{list-style:none; margin:0; padding:8px 12px; flex:1;}
+  .menu-item{
+    display:flex; align-items:center; gap:12px; padding:12px 12px; border-radius:10px;
+    color:var(--muted); cursor:pointer; margin-bottom:4px; border-left:2px solid transparent;
+    font-size:14.5px; font-weight:500;
+  }
+  .menu-item svg{width:18px; height:18px; stroke:currentColor; flex-shrink:0;}
+  .menu-item:active{background:var(--surface);}
+  .menu-item.active{
+    color:var(--gold-bright); background:rgba(201,162,39,.1); border-left:2px solid var(--gold);
+  }
+  .sidebar-footer{padding:14px 20px 0; border-top:1px solid var(--border-soft); margin-top:8px;}
+  .sidebar-footer p{font-size:11px; color:var(--muted); line-height:1.5; margin:0;}
+
+  /* ---------- CONTENT ---------- */
+  .content{max-width:520px; margin:0 auto; padding:22px 18px 60px;}
+  .view{display:none;}
+  .view.active{display:block; animation:fadeIn .25s ease;}
+  @keyframes fadeIn{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);}}
+
+  .view-eyebrow{
+    font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.18em; text-transform:uppercase;
+    color:var(--gold); display:flex; align-items:center; gap:8px;
+  }
+  .view-eyebrow::before{content:''; width:16px; height:1px; background:var(--gold);}
+  h1.title{
+    font-family:'Fraunces',serif; font-weight:600; font-size:30px; line-height:1.08;
+    margin:8px 0 4px; color:var(--ivory);
+  }
+  .subtitle{color:var(--muted); font-size:13.5px; margin:0 0 20px; line-height:1.5;}
+
+  /* Certificate / signature element */
+  .certificate{
+    position:relative;
+    background: linear-gradient(155deg, var(--surface-2), var(--surface));
+    border:1px solid var(--border);
+    border-radius:18px;
+    padding:26px 22px 22px;
+    margin-bottom:20px;
+    overflow:hidden;
+  }
+  .certificate::before{
+    content:'';
+    position:absolute; inset:8px;
+    border:1px solid rgba(201,162,39,.35);
+    border-radius:12px;
+    pointer-events:none;
+  }
+  .cert-perf{
+    position:absolute; left:0; right:0; bottom:0; height:10px;
+    background-image: radial-gradient(circle at 10px 0, var(--bg) 5px, transparent 5.5px);
+    background-size: 20px 10px;
+    background-repeat: repeat-x;
+  }
+  .cert-row{display:flex; justify-content:space-between; align-items:flex-start; gap:10px;}
+  .cert-id{font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--muted); letter-spacing:.08em;}
+  .cert-seal{
+    width:46px; height:46px; border-radius:50%;
+    border:1.5px solid var(--gold);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Fraunces',serif; font-style:italic; color:var(--gold-bright); font-size:15px;
+    flex-shrink:0;
+    box-shadow: 0 0 0 3px rgba(201,162,39,.12);
+  }
+  .cert-main{margin-top:18px;}
+  .cert-label{font-size:11px; text-transform:uppercase; letter-spacing:.12em; color:var(--muted); font-family:'IBM Plex Mono',monospace;}
+  .cert-gram{
+    font-family:'Fraunces',serif; font-weight:600; font-size:46px; color:var(--gold-bright);
+    line-height:1; margin:6px 0 2px;
+  }
+  .cert-gram span{font-size:20px; color:var(--muted); font-weight:400;}
+  .cert-grid{display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:20px; padding-top:16px; border-top:1px dashed var(--border);}
+  .cert-metric .cert-label{margin-bottom:4px;}
+  .cert-value{font-family:'IBM Plex Mono',monospace; font-size:16px; font-weight:600; color:var(--ivory);}
+  .cert-value.pos{color:var(--green);}
+  .cert-value.neg{color:var(--rust);}
+
+  .card{
+    background:var(--surface);
+    border:1px solid var(--border-soft);
+    border-radius:var(--radius);
+    padding:20px;
+    margin-bottom:16px;
+  }
+  .card h2{
+    font-family:'Fraunces',serif; font-weight:600; font-size:19px; margin:0 0 4px; color:var(--ivory);
+  }
+  .card .hint{font-size:12.5px; color:var(--muted); margin:0 0 16px; line-height:1.5;}
+
+  label{display:block; font-size:12px; color:var(--muted); margin-bottom:6px; font-family:'IBM Plex Mono',monospace; letter-spacing:.03em;}
+  input[type=number], input[type=date], select{
+    width:100%; background:var(--surface-2); border:1px solid var(--border);
+    color:var(--ivory); padding:11px 12px; border-radius:9px; font-size:15px;
+    font-family:'IBM Plex Mono',monospace; margin-bottom:14px;
+  }
+  input:focus, select:focus{outline:2px solid var(--gold); outline-offset:1px; border-color:var(--gold);}
+
+  .seg{display:flex; background:var(--surface-2); border:1px solid var(--border); border-radius:9px; padding:3px; margin-bottom:14px;}
+  .seg button{
+    flex:1; background:transparent; border:none; color:var(--muted); padding:9px 4px;
+    font-family:'Inter'; font-size:13px; font-weight:600; border-radius:6px; cursor:pointer;
+  }
+  .seg button.active{background:var(--gold); color:var(--bg-2);}
+
+  .row2{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+
+  .checkrow{display:flex; align-items:center; gap:10px; margin-bottom:12px;}
+  .checkrow input[type=checkbox]{width:18px; height:18px; accent-color:var(--gold); margin:0;}
+  .checkrow label{margin:0; color:var(--ivory); font-family:'Inter'; font-size:13.5px;}
+
+  .btn{
+    width:100%; background:var(--gold); color:var(--bg-2); border:none; padding:13px;
+    border-radius:9px; font-weight:700; font-size:14.5px; cursor:pointer; font-family:'Inter';
+    letter-spacing:.02em;
+  }
+  .btn:active{background:var(--gold-bright);}
+  .btn-ghost{
+    background:transparent; border:1px solid var(--border); color:var(--muted);
+  }
+
+  .tax-note{
+    background:rgba(192,107,77,.08); border:1px solid rgba(192,107,77,.25);
+    border-radius:9px; padding:10px 12px; font-size:12px; color:var(--rust); line-height:1.5; margin-top:6px;
+  }
+
+  /* Price board */
+  .price-updated{font-size:10.5px; color:var(--muted); font-family:'IBM Plex Mono',monospace; margin-top:2px;}
+  .price-actions{margin-top:10px; display:flex; gap:8px;}
+  .btn-small{
+    flex:1; background:transparent; border:1px solid var(--gold); color:var(--gold-bright);
+    padding:9px 8px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; font-family:'Inter';
+    white-space:nowrap;
+  }
+  .btn-small:active{background:rgba(201,162,39,.12);}
+
+  .live-price-row{display:flex; justify-content:space-between; align-items:center; gap:12px;}
+  .live-price-value{font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:24px; color:var(--gold-bright); margin:4px 0 2px;}
+
+  /* Denomination table (Galeri24 live) */
+  .denom-row{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:11px 0; border-bottom:1px solid var(--border-soft); gap:10px;
+  }
+  .denom-row:last-child{border-bottom:none;}
+  .denom-weight{
+    font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:13px; color:var(--gold-bright);
+    background:var(--surface-2); border:1px solid var(--border); border-radius:7px;
+    padding:5px 9px; flex-shrink:0; min-width:52px; text-align:center;
+  }
+  .denom-prices{flex:1; min-width:0;}
+  .denom-jual{font-size:13.5px; color:var(--ivory); font-family:'IBM Plex Mono',monospace;}
+  .denom-buyback{font-size:11px; color:var(--muted); font-family:'IBM Plex Mono',monospace; margin-top:1px;}
+  .denom-out{font-size:12px; color:var(--muted); font-style:italic;}
+  .denom-use{
+    flex-shrink:0; background:transparent; border:1px solid var(--gold); color:var(--gold-bright);
+    padding:7px 10px; border-radius:7px; font-size:11.5px; font-weight:600; cursor:pointer; font-family:'Inter';
+  }
+  .denom-use:active{background:rgba(201,162,39,.12);}
+
+  /* Zakat */
+  .nisab-bar{height:8px; background:var(--surface-2); border-radius:6px; overflow:hidden; margin:10px 0 8px; border:1px solid var(--border);}
+  .nisab-fill{height:100%; background:linear-gradient(90deg, var(--gold), var(--gold-bright)); transition:width .4s;}
+  .zakat-status{
+    display:flex; align-items:center; gap:10px; padding:14px; border-radius:10px; margin-top:14px;
+  }
+  .zakat-status.due{background:rgba(122,155,126,.1); border:1px solid rgba(122,155,126,.3);}
+  .zakat-status.wait{background:var(--surface-2); border:1px solid var(--border);}
+  .zakat-dot{width:9px; height:9px; border-radius:50%; flex-shrink:0;}
+  .zakat-status.due .zakat-dot{background:var(--green);}
+  .zakat-status.wait .zakat-dot{background:var(--muted);}
+  .zakat-text{font-size:13px; line-height:1.5;}
+  .zakat-amount{font-family:'IBM Plex Mono',monospace; font-weight:600; color:var(--green); font-size:17px; margin-top:2px;}
+
+  /* Pajak quick calc */
+  .tax-result{
+    display:flex; justify-content:space-between; align-items:center; margin-top:14px;
+    padding:14px; border-radius:10px; background:var(--surface-2); border:1px solid var(--border);
+  }
+  .tax-result .cert-label{margin-bottom:4px;}
+  .tax-result-amount{font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:18px; color:var(--gold-bright);}
+  .info-list{margin:0; padding-left:18px; font-size:12.5px; color:var(--muted); line-height:1.7;}
+
+  /* History */
+  .tx{display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid var(--border-soft);}
+  .tx:last-child{border-bottom:none;}
+  .tx-left{display:flex; flex-direction:column; gap:2px;}
+  .tx-type{font-size:13px; font-weight:600;}
+  .tx-type.beli{color:var(--gold-bright);}
+  .tx-type.jual{color:var(--rust);}
+  .tx-date{font-size:11px; color:var(--muted); font-family:'IBM Plex Mono',monospace;}
+  .tx-right{text-align:right; display:flex; align-items:center; gap:10px;}
+  .tx-gram{font-family:'IBM Plex Mono',monospace; font-size:13.5px;}
+  .tx-del{background:none; border:none; color:var(--muted); font-size:16px; cursor:pointer; padding:4px;}
+  .empty{color:var(--muted); font-size:13px; text-align:center; padding:20px 0;}
+
+  footer.legal{max-width:520px; margin:0 auto; padding:8px 18px 24px; color:var(--muted); font-size:11.5px; line-height:1.6; text-align:center;}
+
+  .install-tip{
+    display:flex; gap:10px; align-items:flex-start; background:var(--surface-2);
+    border:1px solid var(--border); border-radius:10px; padding:12px 14px; margin-bottom:20px;
+    font-size:12.5px; color:var(--muted); line-height:1.55;
+  }
+  .install-tip b{color:var(--ivory);}
+
+  @media(min-width:860px){
+    .hamburger{display:none;}
+    .backdrop{display:none;}
+    .sidebar{transform:translateX(0); position:sticky; top:0; height:100vh;}
+    body{display:flex;}
+    .app-main{flex:1; display:flex; flex-direction:column; min-width:0;}
+    .topbar{display:none;}
+    .content{padding-top:32px;}
+  }
+</style>
+</head>
+<body>
+
+  <div class="backdrop" id="backdrop"></div>
+
+  <div class="modal-backdrop" id="txModalBackdrop"></div>
+  <div class="modal-sheet" id="txModal">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <h2>Tambah Transaksi</h2>
+      <button class="modal-close" id="btnCloseModal" aria-label="Tutup">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="seg" id="segType">
+        <button type="button" class="active" data-val="beli">Beli</button>
+        <button type="button" data-val="jual">Jual</button>
+      </div>
+
+      <label for="txBrandSelect">Merek Emas</label>
+      <select id="txBrandSelect">
+        <option value="manual">Manual (isi sendiri)</option>
+      </select>
+
+      <label for="txDate">Tanggal</label>
+      <input type="date" id="txDate">
+
+      <div class="row2">
+        <div>
+          <label for="gramInput" id="gramLabel">Jumlah (gram)</label>
+          <input type="number" id="gramInput" placeholder="0.5" step="0.001" inputmode="decimal">
+          <select id="gramSelect" style="display:none;"></select>
+        </div>
+        <div>
+          <label for="hargaPerGram">Harga/gram (Rp)</label>
+          <input type="text" id="hargaPerGram" placeholder="1.850.000" inputmode="numeric">
+        </div>
+      </div>
+      <p id="txHargaNote" style="display:none; font-size:11.5px; color:var(--muted); margin:-8px 0 14px; line-height:1.5;"></p>
+      <p id="txTotalPreview" style="display:none; font-size:13px; color:var(--gold-bright); margin:-8px 0 16px; font-family:'IBM Plex Mono',monospace;"></p>
+
+      <div class="checkrow">
+        <input type="checkbox" id="applyTax">
+        <label for="applyTax">Kenakan estimasi PPh Pasal 22 (beli emas batangan dari produsen)</label>
+      </div>
+      <div id="taxOptions" style="display:none;">
+        <div class="seg" id="segNpwp">
+          <button type="button" class="active" data-val="ya">Punya NPWP (0,25%)</button>
+          <button type="button" data-val="tidak">Tanpa NPWP (0,45%)</button>
+        </div>
+        <div class="tax-note">Estimasi saja. PPh 22 umumnya berlaku untuk pembelian emas batangan langsung dari badan usaha produsen/penambang (mis. Antam) dan bisa dikreditkan di SPT Tahunan bila kamu wajib pajak. Aplikasi tabungan emas digital (Pegadaian, marketplace, dll) punya skema harga yang mungkin berbeda — cek syarat &amp; ketentuan penyedia masing-masing.</div>
+      </div>
+
+      <button class="btn" id="btnAdd" style="margin-top:6px;">Simpan Transaksi</button>
+      <p id="formMsg" style="display:none; font-size:12px; color:var(--rust); margin:10px 0 0; text-align:center;"></p>
+    </div>
+  </div>
+
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-eyebrow">Buku Digital</div>
+      <div class="sidebar-title">Tabungan Emas</div>
+    </div>
+    <ul class="menu" id="menu">
+      <li class="menu-item active" data-view="dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+        <span>Dashboard</span>
+      </li>
+      <li class="menu-item" data-view="riwayat">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+        <span>Transaksi</span>
+      </li>
+      <li class="menu-item" data-view="harga">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>
+        <span>Harga Emas</span>
+      </li>
+      <li class="menu-item" data-view="zakat">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5Z"/></svg>
+        <span>Zakat &amp; Pajak</span>
+      </li>
+    </ul>
+    <div class="sidebar-footer">
+      <p>Data tersimpan lokal di perangkat kamu, tidak dikirim ke server manapun.</p>
+    </div>
+  </nav>
+
+  <div class="app-main">
+    <div class="topbar">
+      <div class="hamburger" id="btnHamburger">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </div>
+      <div class="topbar-title" id="topbarTitle">Dashboard</div>
+      <div class="topbar-seal">Au</div>
+    </div>
+
+    <div class="storage-banner" id="storageWarning">
+      ⚠️ Penyimpanan otomatis tidak tersedia di tampilan ini. Data akan hilang saat halaman ditutup — buka file lewat Safari langsung (bukan preview chat) supaya data tersimpan permanen.
+    </div>
+
+    <div class="content">
+
+      <!-- ============ DASHBOARD ============ -->
+      <section class="view active" data-view="dashboard">
+        <div class="view-eyebrow">Ringkasan</div>
+        <h1 class="title">Dashboard</h1>
+        <p class="subtitle">Pantau total emas, modal, dan nilai portofolio kamu sekilas.</p>
+
+        <div class="install-tip" id="installTip">
+          <span>📲</span>
+          <div><b>Cara install di iPhone:</b> buka file ini di Safari → tombol Share (kotak dengan panah) → "Add to Home Screen". Ikon akan muncul di layar utama seperti aplikasi biasa.</div>
+        </div>
+
+        <div class="certificate">
+          <div class="cert-row">
+            <div><div class="cert-id" id="certId">NO. REK — 0000</div></div>
+            <div class="cert-seal">Au</div>
+          </div>
+          <div class="cert-main">
+            <div class="cert-label">Total Emas Dimiliki</div>
+            <div class="cert-gram" id="totalGram">0,000 <span>gram</span></div>
+          </div>
+          <div class="cert-grid">
+            <div class="cert-metric">
+              <div class="cert-label">Modal Ditanam</div>
+              <div class="cert-value" id="totalModal">Rp 0</div>
+            </div>
+            <div class="cert-metric">
+              <div class="cert-label">Nilai Sekarang</div>
+              <div class="cert-value" id="totalNilai">Rp 0</div>
+              <div class="price-updated" id="nilaiSekarangSource">Menunggu data live…</div>
+            </div>
+            <div class="cert-metric">
+              <div class="cert-label">Untung / Rugi</div>
+              <div class="cert-value" id="untungRugi">Rp 0</div>
+            </div>
+            <div class="cert-metric">
+              <div class="cert-label">Persentase</div>
+              <div class="cert-value" id="persenUR">0%</div>
+            </div>
+          </div>
+          <div class="cert-perf"></div>
+        </div>
+      </section>
+
+      <!-- ============ RIWAYAT TRANSAKSI ============ -->
+      <section class="view" data-view="riwayat">
+        <div class="view-eyebrow">Jejak Rekam</div>
+        <h1 class="title">Transaksi</h1>
+        <p class="subtitle">Semua catatan beli dan jual emas kamu, terurut dari yang terbaru.</p>
+
+        <button class="btn" id="btnOpenAddModal" style="margin-bottom:16px;">+ Tambah Transaksi</button>
+
+        <div class="card">
+          <div id="txList"><div class="empty">Belum ada transaksi tersimpan.</div></div>
+        </div>
+
+        <button class="btn btn-ghost" id="btnReset">Hapus Semua Data</button>
+      </section>
+
+      <!-- ============ HARGA EMAS ============ -->
+      <section class="view" data-view="harga">
+        <div class="view-eyebrow">Pantau Pasar</div>
+        <h1 class="title">Harga Emas</h1>
+        <p class="subtitle">Papan harga per merek yang kamu perbarui sendiri, plus tautan cepat ke sumber resmi untuk cek angka terbaru.</p>
+
+        <div class="install-tip" id="liveInfoTip">
+          <span>📡</span>
+          <div>Harga emas <b>dunia</b> (spot internasional) ditarik otomatis lewat internet dan dikonversi ke Rupiah pakai kurs terkini. Ini beda dengan harga retail Antam/UBS/Galeri24/dll yang punya tambahan ongkos cetak &amp; margin toko — jadi harga per merek di bawah tetap perlu kamu cocokkan manual dari tautan resmi.</div>
+        </div>
+
+        <div class="card">
+          <h2>Harga Emas Dunia <span style="color:var(--green); font-size:11px; font-family:'IBM Plex Mono',monospace; vertical-align:middle;">● LIVE</span></h2>
+          <p class="hint">Spot XAU/USD dikonversi ke Rupiah per gram, ditarik otomatis dari internet.</p>
+          <div class="live-price-row">
+            <div>
+              <div class="cert-label">Estimasi per gram (24K)</div>
+              <div class="live-price-value" id="liveSpotIdr">—</div>
+              <div class="price-updated" id="liveSpotMeta">Belum ditarik</div>
+            </div>
+            <button class="btn-small" id="btnRefreshLive" style="flex:none; width:auto; padding:9px 14px;">🔄 Tarik Ulang</button>
+          </div>
+          <p id="liveSpotError" style="display:none; font-size:12px; color:var(--rust); margin-top:10px; line-height:1.5;"></p>
+        </div>
+
+        <div class="card">
+          <h2>Papan Harga Galeri 24 <span style="color:var(--green); font-size:11px; font-family:'IBM Plex Mono',monospace; vertical-align:middle;">● LIVE</span></h2>
+          <p class="hint">Harga jual &amp; buyback per denominasi berat, ditarik otomatis dari galeri24.co.id (lewat API pihak ketiga <em>logam-mulia-api</em>, disalurkan lewat CORS proxy publik karena API tersebut belum mendukung akses langsung dari browser).</p>
+
+          <div class="row2" style="margin-bottom:4px;">
+            <div>
+              <label for="galeriBrandSelect">Merek</label>
+              <select id="galeriBrandSelect"></select>
+            </div>
+            <div style="display:flex; align-items:flex-end; gap:8px; margin-bottom:14px;">
+              <button class="btn-small" id="btnRefreshGaleri" style="flex:1;">🔄 Tarik Ulang</button>
+            </div>
+          </div>
+          <div class="price-updated" id="galeriMeta" style="margin-bottom:12px;">Belum ditarik</div>
+
+          <div id="galeriTable"></div>
+          <p id="galeriError" style="display:none; font-size:12px; color:var(--rust); margin-top:10px; line-height:1.5;"></p>
+        </div>
+      </section>
+
+      <!-- ============ ZAKAT & PAJAK ============ -->
+      <section class="view" data-view="zakat">
+        <div class="view-eyebrow">Kewajiban</div>
+        <h1 class="title">Zakat &amp; Pajak</h1>
+        <p class="subtitle">Estimasi zakat emas dan pajak pembelian, dihitung dari data tabungan kamu.</p>
+
+        <div class="card">
+          <h2>Zakat Emas</h2>
+          <p class="hint">Nisab 85 gram emas murni, kadar 2,5%, wajib jika kepemilikan sudah mencapai nisab dan tersimpan genap 1 tahun (haul).</p>
+
+          <div class="checkrow">
+            <input type="checkbox" id="perhiasanDipakai">
+            <label for="perhiasanDipakai">Emas ini perhiasan yang dipakai sehari-hari (bukan simpanan/investasi)</label>
+          </div>
+
+          <label>Progres menuju nisab (85 gram)</label>
+          <div class="nisab-bar"><div class="nisab-fill" id="nisabFill" style="width:0%"></div></div>
+          <div style="display:flex; justify-content:space-between; font-size:11.5px; color:var(--muted); font-family:'IBM Plex Mono',monospace;">
+            <span id="nisabCurrent">0 g</span>
+            <span>85 g</span>
+          </div>
+
+          <div class="zakat-status wait" id="zakatStatus">
+            <div class="zakat-dot"></div>
+            <div class="zakat-text" id="zakatText">Belum ada data transaksi.</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Kalkulator Cepat Pajak</h2>
+          <p class="hint">Estimasi PPh Pasal 22 untuk satu transaksi pembelian emas batangan, tanpa perlu menyimpannya sebagai catatan.</p>
+
+          <label for="taxCalcNominal">Nominal pembelian (Rp)</label>
+          <input type="text" id="taxCalcNominal" placeholder="1.000.000" inputmode="numeric">
+
+          <div class="seg" id="segTaxCalc">
+            <button type="button" class="active" data-val="ya">Punya NPWP (0,25%)</button>
+            <button type="button" data-val="tidak">Tanpa NPWP (0,45%)</button>
+          </div>
+
+          <div class="tax-result">
+            <div>
+              <div class="cert-label">Estimasi PPh 22</div>
+              <div class="tax-result-amount" id="taxCalcResult">Rp 0</div>
+            </div>
+          </div>
+
+          <p class="hint" style="margin:16px 0 8px;">Beberapa hal penting seputar pajak emas:</p>
+          <ul class="info-list">
+            <li>PPh 22 dipungut oleh badan usaha produsen/penambang saat penjualan emas batangan.</li>
+            <li>Tarif 0,25% berlaku bagi pembeli ber-NPWP, 0,45% bagi yang tidak ber-NPWP.</li>
+            <li>Pajak ini umumnya bisa dikreditkan dalam SPT Tahunan bagi wajib pajak orang pribadi.</li>
+            <li>Emas perhiasan dan platform tabungan emas digital dapat memiliki skema pajak berbeda.</li>
+          </ul>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="legal">
+      Kalkulator ini bersifat edukatif dan estimatif — bukan nasihat pajak atau fatwa zakat resmi.
+      Untuk kepastian, konsultasikan ke petugas pajak (DJP) atau lembaga amil zakat (mis. BAZNAS).
+      Data disimpan hanya di perangkat kamu (local storage), tidak dikirim ke server manapun.
+    </footer>
+  </div>
+
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+  const fmtRp = n => 'Rp ' + Math.round(n).toLocaleString('id-ID');
+  const fmtGram = n => n.toLocaleString('id-ID',{minimumFractionDigits:3, maximumFractionDigits:3});
+  const todayISO = () => new Date().toISOString().slice(0,10);
+
+  function parseRupiah(str){
+    if(!str) return 0;
+    const digits = String(str).replace(/[^0-9]/g, '');
+    return digits ? parseInt(digits, 10) : 0;
+  }
+  function getRupiahValue(id){
+    return parseRupiah($(id).value);
+  }
+  function setRupiahValue(id, num){
+    $(id).value = num ? Math.round(num).toLocaleString('id-ID') : '';
+  }
+  function attachRupiahFormatting(id){
+    const el = $(id);
+    el.addEventListener('input', ()=>{
+      const cursorFromEnd = el.value.length - el.selectionStart;
+      const raw = parseRupiah(el.value);
+      el.value = raw ? raw.toLocaleString('id-ID') : '';
+      const newPos = Math.max(el.value.length - cursorFromEnd, 0);
+      el.setSelectionRange(newPos, newPos);
+    });
+  }
+
+  $('txDate').value = todayISO();
+  $('certId').textContent = 'NO. REK — ' + Math.floor(1000+Math.random()*9000);
+
+  /* ---------- Sidebar / navigation ---------- */
+  const menuLabels = {dashboard:'Dashboard', riwayat:'Transaksi', harga:'Harga Emas', zakat:'Zakat & Pajak'};
+  const sidebar = $('sidebar');
+  const backdrop = $('backdrop');
+
+  function openSidebar(){ sidebar.classList.add('open'); backdrop.classList.add('open'); }
+  function closeSidebar(){ sidebar.classList.remove('open'); backdrop.classList.remove('open'); }
+
+  $('btnHamburger').addEventListener('click', ()=>{
+    sidebar.classList.contains('open') ? closeSidebar() : openSidebar();
+  });
+  backdrop.addEventListener('click', closeSidebar);
+
+  /* ---------- Add-transaction modal ---------- */
+  const txModal = $('txModal');
+  const txModalBackdrop = $('txModalBackdrop');
+
+  function openTxModal(){
+    txModal.classList.add('open');
+    txModalBackdrop.classList.add('open');
+  }
+  function closeTxModal(){
+    txModal.classList.remove('open');
+    txModalBackdrop.classList.remove('open');
+  }
+  txModalBackdrop.addEventListener('click', closeTxModal);
+  $('btnCloseModal').addEventListener('click', closeTxModal);
+  $('btnOpenAddModal').addEventListener('click', openTxModal);
+
+  function switchView(view){
+    document.querySelectorAll('.view').forEach(v=> v.classList.toggle('active', v.dataset.view===view));
+    document.querySelectorAll('.menu-item').forEach(m=> m.classList.toggle('active', m.dataset.view===view));
+    $('topbarTitle').textContent = menuLabels[view] || 'Dashboard';
+    closeSidebar();
+    window.scrollTo(0,0);
+  }
+  document.querySelectorAll('.menu-item').forEach(item=>{
+    item.addEventListener('click', ()=> switchView(item.dataset.view));
+  });
+
+  /* ---------- Storage (safe) ---------- */
+  const STORAGE_KEY = 'emasTransactions_v1';
+  let storageOK = true;
+
+  function loadState(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : [];
+    }catch(e){
+      storageOK = false;
+      return [];
+    }
+  }
+
+  let state = loadState();
+  let txType = 'beli';
+  let npwp = 'ya';
+  let taxCalcNpwp = 'ya';
+
+  function save(){
+    try{
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }catch(e){
+      storageOK = false;
+    }
+    render();
+  }
+
+  /* ---------- Live world gold price (auto, via internet) ---------- */
+  const GRAM_PER_TROY_OZ = 31.1034768;
+  let liveGold = null;      // {xauUsd, usdIdr, idrPerGram, updatedAt}
+  let liveFetching = false;
+
+  function renderLiveGold(errMsg){
+    const valEl = $('liveSpotIdr');
+    const metaEl = $('liveSpotMeta');
+    const errEl = $('liveSpotError');
+    const btn = $('btnRefreshLive');
+    if(!valEl) return; // view not in DOM yet, ignore
+
+    btn.textContent = liveFetching ? 'Menarik…' : '🔄 Tarik Ulang';
+    btn.disabled = liveFetching;
+
+    if(liveGold){
+      valEl.textContent = fmtRp(liveGold.idrPerGram);
+      metaEl.textContent = 'Diperbarui ' + new Date(liveGold.updatedAt).toLocaleString('id-ID',{dateStyle:'medium', timeStyle:'short'}) + ' · kurs 1 USD ≈ ' + fmtRp(liveGold.usdIdr);
+    } else {
+      valEl.textContent = '—';
+      metaEl.textContent = liveFetching ? 'Menarik data dari internet…' : 'Belum ditarik';
+    }
+
+    if(errMsg){
+      errEl.textContent = errMsg;
+      errEl.style.display = 'block';
+    } else {
+      errEl.style.display = 'none';
+    }
+  }
+
+  async function fetchLiveGold(onDone){
+    if(liveFetching) return;
+    liveFetching = true;
+    renderLiveGold();
+
+    let xauUsd, usdIdr;
+    let goldError = null, fxError = null;
+
+    const controller = new AbortController();
+    const timeout = setTimeout(()=> controller.abort(), 10000);
+
+    try{
+      const goldRes = await fetch('https://api.gold-api.com/price/XAU', {signal: controller.signal});
+      if(!goldRes.ok) throw new Error('status ' + goldRes.status);
+      const goldData = await goldRes.json();
+      xauUsd = goldData?.price;
+      if(!xauUsd) throw new Error('format tidak dikenali');
+    }catch(e){
+      goldError = e;
+    }
+
+    try{
+      const fxRes = await fetch('https://open.er-api.com/v6/latest/USD', {signal: controller.signal});
+      if(!fxRes.ok) throw new Error('status ' + fxRes.status);
+      const fxData = await fxRes.json();
+      usdIdr = fxData?.rates?.IDR;
+      if(!usdIdr) throw new Error('format tidak dikenali');
+    }catch(e){
+      fxError = e;
+    }
+
+    clearTimeout(timeout);
+    liveFetching = false;
+
+    if(xauUsd && usdIdr){
+      liveGold = {
+        xauUsd, usdIdr,
+        idrPerGram: (xauUsd / GRAM_PER_TROY_OZ) * usdIdr,
+        updatedAt: new Date().toISOString()
+      };
+      renderLiveGold();
+    } else {
+      const parts = [];
+      if(goldError) parts.push('harga emas (gold-api.com)');
+      if(fxError) parts.push('kurs USD→IDR (open.er-api.com)');
+      let msg = 'Gagal menarik ' + parts.join(' dan ') + '. ';
+      if(controller.signal.aborted){
+        msg = 'Waktu tunggu habis — cek koneksi internet kamu lalu tap "Tarik Ulang". ';
+      } else {
+        msg += 'Kemungkinan browser/koneksi kamu memblokir permintaan ke server ini (coba buka DevTools → tab Console/Network untuk detail error), atau server sedang bermasalah. ';
+      }
+      msg += 'Kamu tetap bisa isi harga manual di papan di bawah.';
+      renderLiveGold(msg);
+    }
+    if(onDone) onDone();
+  }
+
+  const btnRefreshLive = $('btnRefreshLive');
+  if(btnRefreshLive) btnRefreshLive.addEventListener('click', ()=> fetchLiveGold());
+
+  /* ---------- Dashboard valuation reference (brand + weight from Galeri24 board) ---------- */
+  const DASHBOARD_REF_KEY = 'emasDashboardRef_v1';
+
+  function loadDashboardRef(){
+    try{
+      const raw = localStorage.getItem(DASHBOARD_REF_KEY);
+      if(raw) return JSON.parse(raw);
+    }catch(e){}
+    return { brand: 'GALERI 24', weight: 1 };
+  }
+  let dashboardRef = loadDashboardRef();
+
+  function setDashboardRef(brand, weight){
+    dashboardRef = { brand, weight };
+    try{ localStorage.setItem(DASHBOARD_REF_KEY, JSON.stringify(dashboardRef)); }catch(e){}
+  }
+
+  function getReferenceGaleriPrice(){
+    if(!galeriLive || !galeriLive.brands) return null;
+
+    const tryBrand = (brandName, weight)=>{
+      const data = galeriLive.brands[brandName];
+      if(!data) return null;
+      const row = data.find(r=> r.weight === weight && r.buyback > 0);
+      return row ? row : null;
+    };
+
+    let row = tryBrand(dashboardRef.brand, dashboardRef.weight);
+    let brandUsed = dashboardRef.brand, weightUsed = dashboardRef.weight;
+
+    // fallback: same brand, any weight with buyback available
+    if(!row && galeriLive.brands[dashboardRef.brand]){
+      const withStock = galeriLive.brands[dashboardRef.brand].filter(r=> r.buyback>0);
+      if(withStock.length){ row = withStock[0]; weightUsed = row.weight; }
+    }
+    // fallback: default GALERI 24 @1g
+    if(!row){
+      row = tryBrand('GALERI 24', 1);
+      if(row){ brandUsed = 'GALERI 24'; weightUsed = 1; }
+    }
+    // fallback: any brand/weight with buyback available at all
+    if(!row){
+      for(const [name, data] of Object.entries(galeriLive.brands)){
+        const withStock = data.filter(r=> r.buyback>0);
+        if(withStock.length){ row = withStock[0]; brandUsed = name; weightUsed = row.weight; break; }
+      }
+    }
+    if(!row) return null;
+    return {
+      perGram: row.buyback / weightUsed,
+      brand: brandUsed,
+      weight: weightUsed,
+      recordedDate: galeriLive.recordedDate
+    };
+  }
+
+  /* ---------- Galeri24 live price board (per denomination) ---------- */
+  const GALERI_CACHE_KEY = 'emasGaleriLive_v2';
+  const GALERI_BRAND_ORDER = ['GALERI 24','ANTAM','UBS','ANTAM MULIA RETRO','ANTAM NON PEGADAIAN','LOTUS ARCHI','DINAR G24'];
+
+  function loadGaleriCache(){
+    try{
+      const raw = localStorage.getItem(GALERI_CACHE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    }catch(e){ return null; }
+  }
+  function saveGaleriCache(){
+    try{ localStorage.setItem(GALERI_CACHE_KEY, JSON.stringify(galeriLive)); }catch(e){}
+  }
+
+  let galeriLive = loadGaleriCache();
+  let galeriFetching = false;
+  let selectedGaleriBrand = null;
+
+  function sortBrandNames(names){
+    return names.sort((a,b)=>{
+      const ia = GALERI_BRAND_ORDER.indexOf(a);
+      const ib = GALERI_BRAND_ORDER.indexOf(b);
+      if(ia===-1 && ib===-1) return a.localeCompare(b);
+      if(ia===-1) return 1;
+      if(ib===-1) return -1;
+      return ia-ib;
+    });
+  }
+
+  function populateGaleriBrandSelect(){
+    const sel = $('galeriBrandSelect');
+    if(!galeriLive || !galeriLive.brands){ sel.innerHTML = '<option>—</option>'; return; }
+    const names = sortBrandNames(Object.keys(galeriLive.brands));
+    if(!selectedGaleriBrand || !names.includes(selectedGaleriBrand)){
+      selectedGaleriBrand = names[0];
+    }
+    sel.innerHTML = names.map(n=> `<option value="${n}" ${n===selectedGaleriBrand?'selected':''}>${n}</option>`).join('');
+  }
+
+  function renderGaleriTable(){
+    const box = $('galeriTable');
+    const metaEl = $('galeriMeta');
+    const btn = $('btnRefreshGaleri');
+
+    btn.textContent = galeriFetching ? 'Menarik…' : '🔄 Tarik Ulang';
+    btn.disabled = galeriFetching;
+
+    if(!galeriLive || !galeriLive.brands){
+      box.innerHTML = '<div class="empty">Belum ada data. Tap "Tarik Ulang".</div>';
+      metaEl.textContent = galeriFetching ? 'Menarik data dari internet…' : 'Belum ditarik';
+      return;
+    }
+
+    metaEl.textContent = 'Data per ' + galeriLive.recordedDate + ' · ditarik ' +
+      new Date(galeriLive.fetchedAt).toLocaleString('id-ID',{dateStyle:'medium', timeStyle:'short'});
+
+    const rows = (galeriLive.brands[selectedGaleriBrand] || []).filter(r=> r.sell>0 || r.buyback>0);
+    if(rows.length===0){
+      box.innerHTML = '<div class="empty">Tidak ada data denominasi untuk merek ini saat ini.</div>';
+      return;
+    }
+
+    box.innerHTML = rows.map(r=>{
+      const canUse = r.buyback>0;
+      const isActive = dashboardRef.brand === selectedGaleriBrand && dashboardRef.weight === r.weight;
+      return `
+        <div class="denom-row">
+          <div class="denom-weight">${r.weight} g</div>
+          <div class="denom-prices">
+            ${r.sell>0 ? `<div class="denom-jual">${fmtRp(r.sell)}</div>` : `<div class="denom-out">Stok kosong</div>`}
+            ${r.buyback>0 ? `<div class="denom-buyback">Buyback ${fmtRp(r.buyback)}</div>` : ''}
+          </div>
+          ${canUse ? `<button class="denom-use" data-weight="${r.weight}">${isActive ? '✓ Acuan Dashboard' : 'Pakai untuk Dashboard'}</button>` : ''}
+        </div>
+      `;
+    }).join('');
+
+    box.querySelectorAll('.denom-use').forEach(useBtn=>{
+      useBtn.addEventListener('click', ()=>{
+        const w = parseFloat(useBtn.dataset.weight);
+        const row = (galeriLive.brands[selectedGaleriBrand] || []).find(r=> r.weight === w);
+        if(!row || !row.buyback) return;
+        setDashboardRef(selectedGaleriBrand, w);
+        renderGaleriTable();
+        render();
+        switchView('dashboard');
+      });
+    });
+  }
+
+  const GALERI_TARGET_URL = 'https://logam-mulia-api.iamutaki.workers.dev/api/prices/galeri24';
+  const CORS_PROXIES = [
+    (url)=> 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url),
+    (url)=> 'https://api.codetabs.com/v1/proxy/?quest=' + encodeURIComponent(url)
+  ];
+
+  async function fetchJsonViaProxies(targetUrl, signal){
+    let lastErr;
+    for(const buildUrl of CORS_PROXIES){
+      try{
+        const res = await fetch(buildUrl(targetUrl), {signal});
+        if(!res.ok) throw new Error('status ' + res.status);
+        return await res.json();
+      }catch(e){
+        lastErr = e;
+      }
+    }
+    throw lastErr || new Error('Semua proxy gagal');
+  }
+
+  async function fetchGaleriLive(){
+    if(galeriFetching) return;
+    galeriFetching = true;
+    renderGaleriTable();
+
+    const errEl = $('galeriError');
+    try{
+      const controller = new AbortController();
+      const timeout = setTimeout(()=> controller.abort(), 15000);
+      const json = await fetchJsonViaProxies(GALERI_TARGET_URL, controller.signal);
+      clearTimeout(timeout);
+      if(!json.success || !Array.isArray(json.data)) throw new Error('format tidak dikenali');
+
+      const brands = {};
+      let recordedDate = '';
+      json.data.forEach(item=>{
+        const name = item.materialType;
+        if(!brands[name]) brands[name] = [];
+        brands[name].push({weight: item.weight, sell: item.sellPrice, buyback: item.buybackPrice});
+        recordedDate = item.recordedDate || recordedDate;
+      });
+      Object.keys(brands).forEach(k=> brands[k].sort((a,b)=> a.weight-b.weight));
+
+      galeriLive = {brands, recordedDate, fetchedAt: new Date().toISOString()};
+      saveGaleriCache();
+      errEl.style.display = 'none';
+    }catch(e){
+      const msg = e.name === 'AbortError'
+        ? 'Waktu tunggu habis — cek koneksi internet, lalu tap "Tarik Ulang" lagi.'
+        : 'Server sumber data atau proxy-nya sedang sibuk/dibatasi. ' + (galeriLive ? 'Menampilkan data tersimpan terakhir — coba "Tarik Ulang" beberapa saat lagi.' : 'Coba lagi dalam beberapa menit, atau isi manual di kartu bawah.');
+      errEl.textContent = msg;
+      errEl.style.display = 'block';
+    }
+
+    galeriFetching = false;
+    populateGaleriBrandSelect();
+    populateTxBrandSelect();
+    renderGaleriTable();
+    render();
+  }
+
+  $('galeriBrandSelect').addEventListener('change', (e)=>{
+    selectedGaleriBrand = e.target.value;
+    renderGaleriTable();
+  });
+  $('btnRefreshGaleri').addEventListener('click', fetchGaleriLive);
+
+  function seg(id, onChange){
+    const el = $(id);
+    el.querySelectorAll('button').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        el.querySelectorAll('button').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        onChange(btn.dataset.val);
+      });
+    });
+  }
+  seg('segType', v=>{ txType = v; updateTxHargaFromBrand(); });
+  seg('segNpwp', v=> npwp = v);
+  seg('segTaxCalc', v=>{ taxCalcNpwp = v; renderTaxCalc(); });
+
+  $('applyTax').addEventListener('change', e=>{
+    $('taxOptions').style.display = e.target.checked ? 'block':'none';
+  });
+
+  /* ---------- Auto-fill harga/gram in modal from brand + date ---------- */
+  let selectedTxBrand = 'manual';
+  const txHistoryCache = {};
+
+  function populateTxBrandSelect(){
+    const sel = $('txBrandSelect');
+    const current = sel.value || 'manual';
+    let options = '<option value="manual">Manual (isi sendiri)</option>';
+    if(galeriLive && galeriLive.brands){
+      const names = sortBrandNames(Object.keys(galeriLive.brands));
+      options += names.map(n=> `<option value="${n}">${n}</option>`).join('');
+    }
+    sel.innerHTML = options;
+    sel.value = [...sel.options].some(o=> o.value===current) ? current : 'manual';
+    selectedTxBrand = sel.value;
+    updateGramFieldMode();
+  }
+
+  function updateGramFieldMode(){
+    const gramInput = $('gramInput');
+    const gramSelect = $('gramSelect');
+    const label = $('gramLabel');
+
+    if(selectedTxBrand === 'manual'){
+      gramInput.style.display = 'block';
+      gramSelect.style.display = 'none';
+      label.textContent = 'Jumlah (gram)';
+      return;
+    }
+
+    label.textContent = 'Denominasi (gram)';
+    gramInput.style.display = 'none';
+    gramSelect.style.display = 'block';
+
+    const brandData = galeriLive.brands[selectedTxBrand] || [];
+    const weights = [...new Set(brandData.map(r=> r.weight))].sort((a,b)=> a-b);
+    const currentVal = parseFloat(gramSelect.value);
+    gramSelect.innerHTML = weights.map(w=> `<option value="${w}">${w} g</option>`).join('');
+    if(weights.includes(currentVal)) gramSelect.value = currentVal;
+    else {
+      const withStock = brandData.filter(r=> r.sell>0).map(r=> r.weight);
+      gramSelect.value = withStock.includes(1) ? 1 : (withStock[0] ?? weights[0]);
+    }
+  }
+
+  function pickReferenceWeight(brandData, preferredWeight){
+    const withStock = brandData.filter(r=> r.sell>0);
+    if(preferredWeight && withStock.some(r=> r.weight===preferredWeight)) return preferredWeight;
+    const one = withStock.find(r=> r.weight===1);
+    if(one) return 1;
+    if(withStock.length) return withStock[0].weight;
+    return brandData.length ? brandData[0].weight : 1;
+  }
+
+  function showTxHargaNote(msg){
+    const el = $('txHargaNote');
+    el.textContent = msg;
+    el.style.display = msg ? 'block' : 'none';
+  }
+
+  function showTxTotalPreview(){
+    const el = $('txTotalPreview');
+    const gram = getCurrentGram();
+    const harga = getRupiahValue('hargaPerGram');
+    if(gram && harga){
+      el.textContent = 'Estimasi total: ' + fmtRp(gram * harga);
+      el.style.display = 'block';
+    } else {
+      el.style.display = 'none';
+    }
+  }
+
+  async function updateTxHargaFromBrand(){
+    if(selectedTxBrand === 'manual' || !galeriLive || !galeriLive.brands){
+      showTxHargaNote('');
+      showTxTotalPreview();
+      return;
+    }
+    const brandData = galeriLive.brands[selectedTxBrand] || [];
+    if(brandData.length === 0){ showTxHargaNote(''); return; }
+
+    const date = $('txDate').value || todayISO();
+    const refWeight = parseFloat($('gramSelect').value) || pickReferenceWeight(brandData, null);
+    const priceField = txType === 'jual' ? 'buyback' : 'sell';
+    const priceFieldHistory = txType === 'jual' ? 'buybackPrice' : 'sellPrice';
+    const priceLabel = txType === 'jual' ? 'buyback' : 'jual';
+
+    showTxHargaNote('Mengambil harga ' + selectedTxBrand + '…');
+
+    let price = null, recordedDateUsed = null;
+
+    if(date === todayISO()){
+      const row = brandData.find(r=> r.weight === refWeight);
+      if(row && row[priceField] > 0){ price = row[priceField]; recordedDateUsed = galeriLive.recordedDate; }
+    }
+
+    if(!price){
+      const cacheKey = selectedTxBrand + '|' + refWeight;
+      try{
+        let history = txHistoryCache[cacheKey];
+        if(!history){
+          const target = 'https://logam-mulia-api.iamutaki.workers.dev/api/prices/galeri24/history?materialType=' +
+            encodeURIComponent(selectedTxBrand) + '&weight=' + refWeight + '&length=1000';
+          const json = await fetchJsonViaProxies(target);
+          history = (json.success && Array.isArray(json.data)) ? json.data : [];
+          txHistoryCache[cacheKey] = history;
+        }
+        const sorted = history.filter(r=> r[priceFieldHistory] > 0)
+          .slice()
+          .sort((a,b)=> new Date(b.recordedDate) - new Date(a.recordedDate));
+        let match = sorted.find(r=> r.recordedDate === date);
+        if(!match) match = sorted.find(r=> new Date(r.recordedDate) <= new Date(date));
+        if(match){ price = match[priceFieldHistory]; recordedDateUsed = match.recordedDate; }
+      }catch(e){ /* fall through to "no data" message below */ }
+    }
+
+    if(price){
+      const perGram = Math.round(price / refWeight);
+      setRupiahValue('hargaPerGram', perGram);
+      const dateNote = (recordedDateUsed && recordedDateUsed !== date)
+        ? ' · data tanggal tepat tidak tersedia, pakai data terdekat ' + recordedDateUsed
+        : '';
+      showTxHargaNote('Harga ' + priceLabel + ' otomatis dari ' + selectedTxBrand + ' (' + refWeight + ' g)' + dateNote + '. Masih bisa diubah manual.');
+    } else {
+      showTxHargaNote('Tidak ada data harga ' + priceLabel + ' ' + selectedTxBrand + ' untuk tanggal ini — isi manual.');
+    }
+    showTxTotalPreview();
+  }
+
+  $('txBrandSelect').addEventListener('change', (e)=>{
+    selectedTxBrand = e.target.value;
+    updateGramFieldMode();
+    updateTxHargaFromBrand();
+  });
+  $('txDate').addEventListener('change', updateTxHargaFromBrand);
+  $('gramSelect').addEventListener('change', updateTxHargaFromBrand);
+  $('gramInput').addEventListener('input', showTxTotalPreview);
+  $('hargaPerGram').addEventListener('input', showTxTotalPreview);
+
+  function showFormMsg(msg){
+    const el = $('formMsg');
+    el.textContent = msg;
+    el.style.display = msg ? 'block' : 'none';
+  }
+
+  function getCurrentGram(){
+    if(selectedTxBrand !== 'manual') return parseFloat($('gramSelect').value);
+    return parseFloat($('gramInput').value);
+  }
+
+  $('btnAdd').addEventListener('click', ()=>{
+    showFormMsg('');
+    const date = $('txDate').value || todayISO();
+
+    const gram = getCurrentGram();
+    const hargaPerGram = getRupiahValue('hargaPerGram');
+    if(!gram || !hargaPerGram){ showFormMsg('Pilih/isi jumlah gram dan harga per gram dulu ya.'); return; }
+    const nominal = gram * hargaPerGram;
+
+    let taxAmount = 0, taxRate = 0;
+    if($('applyTax').checked && txType==='beli'){
+      taxRate = npwp==='ya' ? 0.0025 : 0.0045;
+      taxAmount = nominal * taxRate;
+    }
+
+    state.push({
+      id: Date.now(),
+      date, type: txType, gram, hargaPerGram, nominal,
+      taxRate, taxAmount
+    });
+    state.sort((a,b)=> new Date(a.date) - new Date(b.date));
+    save();
+
+    $('gramInput').value='';
+    closeTxModal();
+    switchView('riwayat');
+  });
+
+  let resetArmed = false;
+  const btnReset = $('btnReset');
+  btnReset.addEventListener('click', ()=>{
+    if(!resetArmed){
+      resetArmed = true;
+      btnReset.textContent = 'Yakin? Tap sekali lagi untuk hapus';
+      btnReset.style.color = 'var(--rust)';
+      btnReset.style.borderColor = 'var(--rust)';
+      setTimeout(()=>{
+        resetArmed = false;
+        btnReset.textContent = 'Hapus Semua Data';
+        btnReset.style.color = '';
+        btnReset.style.borderColor = '';
+      }, 3000);
+      return;
+    }
+    resetArmed = false;
+    btnReset.textContent = 'Hapus Semua Data';
+    btnReset.style.color = '';
+    btnReset.style.borderColor = '';
+    state = [];
+    save();
+  });
+
+  function computeTotals(){
+    let totalGram=0, totalModal=0;
+    state.forEach(t=>{
+      if(t.type==='beli'){ totalGram += t.gram; totalModal += t.nominal + t.taxAmount; }
+      else { totalGram -= t.gram; totalModal -= t.nominal; }
+    });
+    return {totalGram: Math.max(totalGram,0), totalModal: Math.max(totalModal,0)};
+  }
+
+  function renderTaxCalc(){
+    const nominal = getRupiahValue('taxCalcNominal');
+    const rate = taxCalcNpwp==='ya' ? 0.0025 : 0.0045;
+    $('taxCalcResult').textContent = fmtRp(nominal * rate);
+  }
+  $('taxCalcNominal').addEventListener('input', renderTaxCalc);
+
+  function render(){
+    const ref = getReferenceGaleriPrice();
+    const harga = ref ? ref.perGram : 0;
+    const {totalGram, totalModal} = computeTotals();
+    const nilaiSekarang = totalGram * harga;
+    const untungRugi = nilaiSekarang - totalModal;
+    const persen = totalModal>0 ? (untungRugi/totalModal*100) : 0;
+
+    $('totalGram').innerHTML = fmtGram(totalGram) + ' <span>gram</span>';
+    $('totalModal').textContent = fmtRp(totalModal);
+    $('totalNilai').textContent = fmtRp(nilaiSekarang);
+    $('nilaiSekarangSource').textContent = ref
+      ? 'Berdasar ' + ref.brand + ' (' + ref.weight + ' g) · ' + ref.recordedDate
+      : 'Menunggu data live… buka menu Harga Emas';
+    const urEl = $('untungRugi'); const pEl = $('persenUR');
+    urEl.textContent = (untungRugi>=0?'+':'') + fmtRp(untungRugi);
+    pEl.textContent = (persen>=0?'+':'') + persen.toFixed(2) + '%';
+    [urEl,pEl].forEach(el=>{
+      el.classList.remove('pos','neg');
+      el.classList.add(untungRugi>=0 ? 'pos':'neg');
+    });
+
+    // Zakat
+    const nisabGram = 85;
+    const pct = Math.min(totalGram/nisabGram*100, 100);
+    $('nisabFill').style.width = pct+'%';
+    $('nisabCurrent').textContent = fmtGram(totalGram)+' g';
+
+    const statusEl = $('zakatStatus'); const textEl = $('zakatText');
+    const isPerhiasan = $('perhiasanDipakai').checked;
+
+    if(state.length===0){
+      statusEl.className='zakat-status wait';
+      textEl.innerHTML = 'Belum ada data transaksi.';
+    } else {
+      const firstDate = new Date(state.find(t=>t.type==='beli')?.date || state[0].date);
+      const days = Math.floor((new Date() - firstDate) / 86400000);
+      const haulDone = days >= 354;
+
+      if(isPerhiasan){
+        statusEl.className='zakat-status wait';
+        textEl.innerHTML = 'Ditandai sebagai perhiasan yang dipakai. Sebagian ulama tidak mewajibkan zakat untuk perhiasan yang dipakai wajar sehari-hari — namun ini termasuk masalah khilafiyah. Disarankan konsultasi ke ustadz/lembaga amil zakat terpercaya.';
+      } else if(totalGram >= nisabGram && haulDone){
+        const zakatAmount = nilaiSekarang * 0.025;
+        statusEl.className='zakat-status due';
+        textEl.innerHTML = 'Sudah mencapai nisab &amp; haul (' + days + ' hari sejak simpanan pertama). Estimasi zakat wajib (2,5%):<div class="zakat-amount">' + fmtRp(zakatAmount) + '</div>';
+      } else if(totalGram >= nisabGram){
+        statusEl.className='zakat-status wait';
+        textEl.innerHTML = 'Sudah mencapai nisab (85 gram), tapi haul (1 tahun kepemilikan) belum genap. Baru ' + days + ' dari ~354 hari.';
+      } else {
+        statusEl.className='zakat-status wait';
+        textEl.innerHTML = 'Belum mencapai nisab 85 gram. Kurang ' + fmtGram(nisabGram-totalGram) + ' gram lagi.';
+      }
+    }
+
+    // History
+    const listEl = $('txList');
+    if(state.length===0){
+      listEl.innerHTML = '<div class="empty">Belum ada transaksi tersimpan.</div>';
+    } else {
+      listEl.innerHTML = [...state].reverse().map(t=>`
+        <div class="tx">
+          <div class="tx-left">
+            <span class="tx-type ${t.type}">${t.type==='beli'?'Beli':'Jual'}</span>
+            <span class="tx-date">${new Date(t.date).toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'})} · ${fmtRp(t.hargaPerGram)}/g${t.taxAmount>0?' · pajak '+fmtRp(t.taxAmount):''}</span>
+          </div>
+          <div class="tx-right">
+            <span class="tx-gram">${fmtGram(t.gram)} g</span>
+            <button class="tx-del" data-id="${t.id}">✕</button>
+          </div>
+        </div>
+      `).join('');
+      listEl.querySelectorAll('.tx-del').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          state = state.filter(t=> t.id !== parseInt(btn.dataset.id));
+          save();
+        });
+      });
+    }
+  }
+
+  $('perhiasanDipakai').addEventListener('change', render);
+
+  attachRupiahFormatting('hargaPerGram');
+  attachRupiahFormatting('taxCalcNominal');
+
+  render();
+  renderTaxCalc();
+  renderLiveGold();
+  fetchLiveGold();
+  populateGaleriBrandSelect();
+  populateTxBrandSelect();
+  renderGaleriTable();
+  fetchGaleriLive();
+
+  if(!storageOK){
+    $('storageWarning').style.display = 'block';
+  }
+
+  try{
+    if(window.navigator.standalone){ $('installTip').style.display='none'; }
+  }catch(e){}
+})();
+</script>
+</body>
+</html>
