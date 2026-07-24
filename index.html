@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Tabungan Emas">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#14110B">
+<title>Buku Tabungan Emas</title>
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%2314110B'/%3E%3Ccircle cx='50' cy='50' r='30' fill='none' stroke='%23C9A227' stroke-width='4'/%3E%3Ctext x='50' y='60' font-size='34' text-anchor='middle' fill='%23E8C468' font-family='Georgia,serif'%3EAu%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="backdrop" id="backdrop"></div>
+
+  <div class="modal-backdrop" id="txModalBackdrop"></div>
+  <div class="modal-sheet" id="txModal">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <h2 id="txModalTitle">Tambah Transaksi</h2>
+      <button class="modal-close" id="btnCloseModal" aria-label="Tutup">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="seg" id="segType">
+        <button type="button" class="active" data-val="beli">Beli</button>
+        <button type="button" data-val="jual">Jual</button>
+      </div>
+
+      <label for="txBrandSelect">Merek Emas</label>
+      <select id="txBrandSelect">
+        <option value="manual">Manual (isi sendiri)</option>
+      </select>
+
+      <label for="txDate">Tanggal</label>
+      <input type="date" id="txDate">
+
+      <div class="row2">
+        <div>
+          <label for="gramInput" id="gramLabel">Jumlah (gram)</label>
+          <input type="number" id="gramInput" placeholder="0.5" step="0.001" inputmode="decimal">
+          <select id="gramSelect" style="display:none;"></select>
+        </div>
+        <div>
+          <label for="hargaPerGram">Harga/gram (Rp)</label>
+          <input type="text" id="hargaPerGram" placeholder="1.850.000" inputmode="numeric">
+        </div>
+      </div>
+      <p id="txHargaNote" style="display:none; font-size:11.5px; color:var(--muted); margin:-8px 0 14px; line-height:1.5;"></p>
+      <p id="txTotalPreview" style="display:none; font-size:13px; color:var(--gold-bright); margin:-8px 0 16px; font-family:'IBM Plex Mono',monospace;"></p>
+
+      <div class="checkrow">
+        <input type="checkbox" id="applyTax">
+        <label for="applyTax">Kenakan estimasi PPh Pasal 22 (beli emas batangan dari produsen)</label>
+      </div>
+      <div id="taxOptions" style="display:none;">
+        <div class="seg" id="segNpwp">
+          <button type="button" class="active" data-val="ya">Punya NPWP (0,25%)</button>
+          <button type="button" data-val="tidak">Tanpa NPWP (0,45%)</button>
+        </div>
+        <div class="tax-note">Estimasi saja. PPh 22 umumnya berlaku untuk pembelian emas batangan langsung dari badan usaha produsen/penambang (mis. Antam) dan bisa dikreditkan di SPT Tahunan bila kamu wajib pajak. Aplikasi tabungan emas digital (Pegadaian, marketplace, dll) punya skema harga yang mungkin berbeda — cek syarat &amp; ketentuan penyedia masing-masing.</div>
+      </div>
+
+      <button class="btn" id="btnAdd" style="margin-top:6px;">Simpan Transaksi</button>
+      <p id="formMsg" style="display:none; font-size:12px; color:var(--rust); margin:10px 0 0; text-align:center;"></p>
+    </div>
+  </div>
+
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-eyebrow">Buku Digital</div>
+      <div class="sidebar-title">Tabungan Emas</div>
+    </div>
+    <ul class="menu" id="menu">
+      <li class="menu-item active" data-view="dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+        <span>Dashboard</span>
+      </li>
+      <li class="menu-item" data-view="riwayat">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+        <span>Transaksi</span>
+      </li>
+      <li class="menu-item" data-view="harga">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>
+        <span>Harga Emas</span>
+      </li>
+      <li class="menu-item" data-view="zakat">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5Z"/></svg>
+        <span>Zakat &amp; Pajak</span>
+      </li>
+      <li class="menu-item" data-view="pengaturan">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 004.6 15a1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.6a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        <span>Pengaturan</span>
+      </li>
+    </ul>
+    <div class="sidebar-footer">
+      <p>Data tersimpan lokal di perangkat kamu, dan tersinkron ke Google Sheets kalau diaktifkan di Pengaturan.</p>
+    </div>
+  </nav>
+
+  <div class="app-main">
+    <div class="topbar">
+      <div class="hamburger" id="btnHamburger">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </div>
+      <div class="topbar-title" id="topbarTitle">Dashboard</div>
+      <div class="topbar-seal">Au</div>
+    </div>
+
+    <div class="storage-banner" id="storageWarning">
+      ⚠️ Penyimpanan otomatis tidak tersedia di tampilan ini. Data akan hilang saat halaman ditutup — buka file lewat Safari langsung (bukan preview chat) supaya data tersimpan permanen.
+    </div>
+
+    <div class="content">
+
+      <!-- ============ DASHBOARD ============ -->
+      <section class="view active" data-view="dashboard">
+        <div class="view-eyebrow">Ringkasan</div>
+        <h1 class="title">Dashboard</h1>
+        <p class="subtitle">Pantau total emas, modal, dan nilai portofolio kamu sekilas.</p>
+
+        <div class="install-tip" id="installTip">
+          <span>📲</span>
+          <div><b>Cara install di iPhone:</b> buka file ini di Safari → tombol Share (kotak dengan panah) → "Add to Home Screen". Ikon akan muncul di layar utama seperti aplikasi biasa.</div>
+        </div>
+
+        <div class="certificate">
+          <div class="cert-row">
+            <div><div class="cert-id" id="certId">NO. REK — 0000</div></div>
+            <div class="cert-seal">Au</div>
+          </div>
+          <div class="cert-main">
+            <div class="cert-label">Total Emas Dimiliki</div>
+            <div class="cert-gram" id="totalGram">0,000 <span>gram</span></div>
+          </div>
+          <div class="cert-grid">
+            <div class="cert-metric">
+              <div class="cert-label">Modal Ditanam</div>
+              <div class="cert-value" id="totalModal">Rp 0</div>
+            </div>
+            <div class="cert-metric">
+              <div class="cert-label">Nilai Sekarang</div>
+              <div class="cert-value" id="totalNilai">Rp 0</div>
+              <div class="price-updated" id="nilaiSekarangSource">Menunggu data live…</div>
+            </div>
+            <div class="cert-metric">
+              <div class="cert-label">Untung / Rugi</div>
+              <div class="cert-value" id="untungRugi">Rp 0</div>
+            </div>
+            <div class="cert-metric">
+              <div class="cert-label">Persentase</div>
+              <div class="cert-value" id="persenUR">0%</div>
+            </div>
+          </div>
+          <div class="cert-perf"></div>
+        </div>
+
+        <div class="card">
+          <h2>Pertumbuhan Modal</h2>
+          <p class="hint">Akumulasi modal yang ditanam dari waktu ke waktu, berdasarkan tanggal tiap transaksi.</p>
+          <div class="chart-wrap" id="growthChartWrap">
+            <canvas id="chartGrowth"></canvas>
+          </div>
+          <div class="empty" id="growthChartEmpty" style="display:none;">Belum ada transaksi tercatat.</div>
+        </div>
+
+        <div class="card">
+          <h2>Distribusi Merek</h2>
+          <p class="hint">Proporsi kepemilikan emas kamu saat ini berdasarkan merek.</p>
+          <div class="chart-wrap chart-wrap-donut" id="brandChartWrap">
+            <canvas id="chartBrand"></canvas>
+          </div>
+          <div class="empty" id="brandChartEmpty" style="display:none;">Belum ada kepemilikan emas.</div>
+          <div class="chart-legend" id="brandLegend"></div>
+        </div>
+      </section>
+
+      <!-- ============ RIWAYAT TRANSAKSI ============ -->
+      <section class="view" data-view="riwayat">
+        <div class="view-eyebrow">Jejak Rekam</div>
+        <h1 class="title">Transaksi</h1>
+        <p class="subtitle">Semua catatan beli dan jual emas kamu, terurut dari yang terbaru.</p>
+
+        <button class="btn" id="btnOpenAddModal" style="margin-bottom:16px;">+ Tambah Transaksi</button>
+
+        <div class="seg" id="segTxTab" style="margin-bottom:16px;">
+          <button type="button" class="active" data-val="beli">Beli</button>
+          <button type="button" data-val="jual">Jual</button>
+        </div>
+
+        <label for="txBrandFilter">Filter Merek</label>
+        <select id="txBrandFilter" style="margin-bottom:16px;">
+          <option value="semua">Semua Merek</option>
+        </select>
+
+        <div class="certificate" style="padding:20px 20px 18px;">
+          <div class="cert-grid" style="margin-top:0; padding-top:0; border-top:none; grid-template-columns:1fr 1fr;">
+            <div class="cert-metric">
+              <div class="cert-label" id="txSummaryLabel1">Modal Ditanam</div>
+              <div class="cert-value" id="txSummaryModal">Rp 0</div>
+            </div>
+            <div class="cert-metric">
+              <div class="cert-label">Nilai Sekarang</div>
+              <div class="cert-value" id="txSummaryNilai">Rp 0</div>
+              <div class="price-updated" id="txSummarySource"></div>
+            </div>
+          </div>
+          <div class="cert-perf"></div>
+        </div>
+
+        <div class="card">
+          <div id="txList"><div class="empty">Belum ada transaksi tersimpan.</div></div>
+        </div>
+
+        <button class="btn btn-ghost" id="btnReset">Hapus Semua Data</button>
+      </section>
+
+      <!-- ============ HARGA EMAS ============ -->
+      <section class="view" data-view="harga">
+        <div class="view-eyebrow">Pantau Pasar</div>
+        <h1 class="title">Harga Emas</h1>
+        <p class="subtitle">Papan harga per merek yang kamu perbarui sendiri, plus tautan cepat ke sumber resmi untuk cek angka terbaru.</p>
+
+        <div class="install-tip" id="liveInfoTip">
+          <span>📡</span>
+          <div>Harga emas <b>dunia</b> (spot internasional) ditarik otomatis lewat internet dan dikonversi ke Rupiah pakai kurs terkini. Ini beda dengan harga retail Antam/UBS/Galeri24/dll yang punya tambahan ongkos cetak &amp; margin toko — jadi harga per merek di bawah tetap perlu kamu cocokkan manual dari tautan resmi.</div>
+        </div>
+
+        <div class="card">
+          <div class="card-head-row">
+            <h2>Harga Emas Dunia <span style="color:var(--green); font-size:11px; font-family:'IBM Plex Mono',monospace; vertical-align:middle;">● LIVE</span></h2>
+            <button class="info-btn" id="btnInfoLiveSpot" aria-label="Info">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="8" r="0.5" fill="currentColor"/></svg>
+            </button>
+          </div>
+          <p class="hint" id="infoLiveSpot" style="display:none;">Spot XAU/USD dikonversi ke Rupiah per gram, ditarik otomatis dari internet setiap 10 menit. Harga emas dunia berbeda dari harga retail Antam/UBS/Galeri24/dll yang punya tambahan ongkos cetak &amp; margin toko.</p>
+          <div class="live-price-row">
+            <div>
+              <div class="cert-label">Estimasi per gram (24K)</div>
+              <div class="live-price-value" id="liveSpotIdr">—</div>
+              <div class="price-updated" id="liveSpotMeta">Belum ditarik</div>
+            </div>
+          </div>
+          <p id="liveSpotError" style="display:none; font-size:12px; color:var(--rust); margin-top:10px; line-height:1.5;"></p>
+        </div>
+
+        <div class="card">
+          <div class="card-head-row">
+            <h2>Papan Harga Galeri 24 <span style="color:var(--green); font-size:11px; font-family:'IBM Plex Mono',monospace; vertical-align:middle;">● LIVE</span></h2>
+            <button class="info-btn" id="btnInfoGaleri" aria-label="Info">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="8" r="0.5" fill="currentColor"/></svg>
+            </button>
+          </div>
+          <p class="hint" id="infoGaleri" style="display:none;">Harga jual &amp; buyback per denominasi berat, ditarik otomatis dari galeri24.co.id setiap 10 menit (lewat API pihak ketiga <em>logam-mulia-api</em>, disalurkan lewat CORS proxy publik karena API tersebut belum mendukung akses langsung dari browser). Setiap transaksi di Dashboard otomatis dinilai pakai harga buyback merek masing-masing; tombol "Jadikan Acuan Cadangan" di bawah hanya jadi acuan untuk transaksi bermerek "Manual" atau merek yang datanya tidak tersedia.</p>
+
+          <label for="galeriBrandSelect">Merek</label>
+          <select id="galeriBrandSelect"></select>
+          <div class="price-updated" id="galeriMeta" style="margin-bottom:12px;">Belum ditarik</div>
+
+          <div id="galeriTable"></div>
+          <p id="galeriError" style="display:none; font-size:12px; color:var(--rust); margin-top:10px; line-height:1.5;"></p>
+        </div>
+      </section>
+
+      <!-- ============ ZAKAT & PAJAK ============ -->
+      <section class="view" data-view="zakat">
+        <div class="view-eyebrow">Kewajiban</div>
+        <h1 class="title">Zakat &amp; Pajak</h1>
+        <p class="subtitle">Estimasi zakat emas dan pajak pembelian, dihitung dari data tabungan kamu.</p>
+
+        <div class="seg" id="segZakatPajakTab" style="margin-bottom:18px;">
+          <button type="button" class="active" data-val="zakat">Zakat</button>
+          <button type="button" data-val="pajak">Pajak</button>
+        </div>
+
+        <div id="tabZakat">
+          <div class="card">
+            <h2>Zakat Emas</h2>
+            <p class="hint">Nisab 85 gram emas murni, kadar 2,5%, wajib jika kepemilikan sudah mencapai nisab dan tersimpan genap 1 tahun (haul).</p>
+
+            <div class="checkrow">
+              <input type="checkbox" id="perhiasanDipakai">
+              <label for="perhiasanDipakai">Emas ini perhiasan yang dipakai sehari-hari (bukan simpanan/investasi)</label>
+            </div>
+
+            <label>Progres menuju nisab (85 gram)</label>
+            <div class="nisab-bar"><div class="nisab-fill" id="nisabFill" style="width:0%"></div></div>
+            <div style="display:flex; justify-content:space-between; font-size:11.5px; color:var(--muted); font-family:'IBM Plex Mono',monospace;">
+              <span id="nisabCurrent">0 g</span>
+              <span>85 g</span>
+            </div>
+
+            <div class="zakat-status wait" id="zakatStatus">
+              <div class="zakat-dot"></div>
+              <div class="zakat-text" id="zakatText">Belum ada data transaksi.</div>
+            </div>
+          </div>
+        </div>
+
+        <div id="tabPajak" style="display:none;">
+          <div class="card">
+            <h2>Kalkulator Cepat Pajak</h2>
+            <p class="hint">Estimasi PPh Pasal 22 untuk satu transaksi pembelian emas batangan, tanpa perlu menyimpannya sebagai catatan.</p>
+
+            <label for="taxCalcNominal">Nominal pembelian (Rp)</label>
+            <input type="text" id="taxCalcNominal" placeholder="1.000.000" inputmode="numeric">
+
+            <div class="seg" id="segTaxCalc">
+              <button type="button" class="active" data-val="ya">Punya NPWP (0,25%)</button>
+              <button type="button" data-val="tidak">Tanpa NPWP (0,45%)</button>
+            </div>
+
+            <div class="tax-result">
+              <div>
+                <div class="cert-label">Estimasi PPh 22</div>
+                <div class="tax-result-amount" id="taxCalcResult">Rp 0</div>
+              </div>
+            </div>
+
+            <p class="hint" style="margin:16px 0 8px;">Beberapa hal penting seputar pajak emas:</p>
+            <ul class="info-list">
+              <li>PPh 22 dipungut oleh badan usaha produsen/penambang saat penjualan emas batangan.</li>
+              <li>Tarif 0,25% berlaku bagi pembeli ber-NPWP, 0,45% bagi yang tidak ber-NPWP.</li>
+              <li>Pajak ini umumnya bisa dikreditkan dalam SPT Tahunan bagi wajib pajak orang pribadi.</li>
+              <li>Emas perhiasan dan platform tabungan emas digital dapat memiliki skema pajak berbeda.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ PENGATURAN ============ -->
+      <section class="view" data-view="pengaturan">
+        <div class="view-eyebrow">Sinkronisasi</div>
+        <h1 class="title">Pengaturan</h1>
+        <p class="subtitle">Hubungkan aplikasi ke Google Sheets sebagai database, supaya transaksi &amp; preferensi kamu tersimpan online dan bisa diakses dari HP mana pun.</p>
+
+        <div class="install-tip">
+          <span>🔗</span>
+          <div>URL &amp; kode rahasia sudah ditanam langsung di kode aplikasi ini, jadi setiap device otomatis tersambung tanpa perlu isi manual. Kalau kamu ingin ganti ke Spreadsheet lain, isi field di bawah — itu akan menimpa nilai bawaan khusus untuk device ini.</div>
+        </div>
+
+        <div class="card">
+          <h2>Sinkronisasi Google Sheets</h2>
+          <p class="hint">Transaksi dan preferensi (acuan dashboard, dll) akan disalin ke Spreadsheet kamu setiap ada perubahan, dan ditarik kembali setiap aplikasi dibuka.</p>
+
+          <label for="syncUrl">Web App URL</label>
+          <input type="text" id="syncUrl" placeholder="https://script.google.com/macros/s/xxxx/exec">
+
+          <label for="syncToken">Kode Rahasia (Token)</label>
+          <input type="text" id="syncToken" placeholder="kode rahasia dari script kamu">
+
+          <div class="checkrow">
+            <input type="checkbox" id="syncAutoEnabled" checked>
+            <label for="syncAutoEnabled">Sinkron otomatis setiap ada perubahan data</label>
+          </div>
+
+          <button class="btn" id="btnSyncSave" style="margin-top:4px;">Simpan &amp; Sinkronkan Sekarang</button>
+          <p id="syncStatus" style="font-size:12px; color:var(--muted); margin:12px 0 0; line-height:1.5;"></p>
+        </div>
+
+        <div class="card" id="cardShareConnection" style="display:none;">
+          <h2>Hubungkan Device Lain</h2>
+          <p class="hint">Daripada ketik ulang URL &amp; kode rahasia secara manual di HP lain, buka link ini (atau scan QR-nya) di device tersebut — otomatis terisi &amp; tersambung.</p>
+          <button class="btn btn-ghost" id="btnGenShareLink" style="margin-bottom:14px;">Buat Link &amp; QR Setup</button>
+          <div id="shareLinkBox" style="display:none;">
+            <label>Link Setup</label>
+            <div style="display:flex; gap:8px; margin-bottom:14px;">
+              <input type="text" id="shareLinkOutput" readonly style="margin-bottom:0;">
+              <button class="btn-small" id="btnCopyShareLink" style="flex:none; width:auto; padding:0 16px;">Salin</button>
+            </div>
+            <div id="shareQrBox" style="display:flex; justify-content:center; padding:16px; background:#fff; border-radius:10px;"></div>
+            <p class="tax-note" style="margin-top:14px;">Siapa pun yang punya link/QR ini bisa membaca &amp; menulis data di Spreadsheet kamu. Jangan bagikan ke orang yang tidak kamu percaya.</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Reset Koneksi</h2>
+          <p class="hint">Putuskan koneksi ke Google Sheets. Data yang sudah tersimpan di Spreadsheet tidak ikut terhapus — hanya berhenti sinkron dari aplikasi ini.</p>
+          <button class="btn btn-ghost" id="btnSyncDisconnect">Putuskan Sinkronisasi</button>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="legal">
+      Kalkulator ini bersifat edukatif dan estimatif — bukan nasihat pajak atau fatwa zakat resmi.
+      Untuk kepastian, konsultasikan ke petugas pajak (DJP) atau lembaga amil zakat (mis. BAZNAS).
+      Data disimpan lokal di perangkat kamu, dan tersinkron ke Google Sheets milikmu sendiri kalau diaktifkan di menu Pengaturan.
+    </footer>
+  </div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
