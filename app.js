@@ -236,17 +236,9 @@
       };
       renderLiveGold();
     } else {
-      const parts = [];
-      if(goldError) parts.push('harga emas (gold-api.com)');
-      if(fxError) parts.push('kurs USD→IDR (open.er-api.com)');
-      let msg = 'Gagal menarik ' + parts.join(' dan ') + '. ';
-      if(controller.signal.aborted){
-        msg = 'Waktu tunggu habis — cek koneksi internet kamu lalu tap "Tarik Ulang". ';
-      } else {
-        msg += 'Kemungkinan browser/koneksi kamu memblokir permintaan ke server ini (coba buka DevTools → tab Console/Network untuk detail error), atau server sedang bermasalah. ';
-      }
-      msg += 'Kamu tetap bisa isi harga manual di papan di bawah.';
-      renderLiveGold(msg);
+      // Gagal sementara — data terakhir (kalau ada) tetap ditampilkan, auto-refresh 10 menit akan coba lagi.
+      // Tidak perlu alert merah karena sudah tidak ada tombol aksi manual untuk pengguna.
+      renderLiveGold();
     }
     if(onDone) onDone();
   }
@@ -602,8 +594,6 @@
     }
 
     box.innerHTML = rows.map(r=>{
-      const canUse = r.buyback>0;
-      const isActive = dashboardRef.brand === selectedGaleriBrand && dashboardRef.weight === r.weight;
       return `
         <div class="denom-row">
           <div class="denom-weight">${r.weight} g</div>
@@ -611,22 +601,9 @@
             ${r.sell>0 ? `<div class="denom-jual">${fmtRp(r.sell)}</div>` : `<div class="denom-out">Stok kosong</div>`}
             ${r.buyback>0 ? `<div class="denom-buyback">Buyback ${fmtRp(r.buyback)}</div>` : ''}
           </div>
-          ${canUse ? `<button class="denom-use" data-weight="${r.weight}">${isActive ? '✓ Acuan Cadangan' : 'Jadikan Acuan Cadangan'}</button>` : ''}
         </div>
       `;
     }).join('');
-
-    box.querySelectorAll('.denom-use').forEach(useBtn=>{
-      useBtn.addEventListener('click', ()=>{
-        const w = parseFloat(useBtn.dataset.weight);
-        const row = (galeriLive.brands[selectedGaleriBrand] || []).find(r=> r.weight === w);
-        if(!row || !row.buyback) return;
-        setDashboardRef(selectedGaleriBrand, w);
-        renderGaleriTable();
-        render();
-        switchView('dashboard');
-      });
-    });
   }
 
   const GALERI_TARGET_URL = 'https://logam-mulia-api.iamutaki.workers.dev/api/prices/galeri24';
@@ -676,11 +653,9 @@
       saveGaleriCache();
       errEl.style.display = 'none';
     }catch(e){
-      const msg = e.name === 'AbortError'
-        ? 'Waktu tunggu habis — cek koneksi internet, lalu tap "Tarik Ulang" lagi.'
-        : 'Server sumber data atau proxy-nya sedang sibuk/dibatasi. ' + (galeriLive ? 'Menampilkan data tersimpan terakhir — coba "Tarik Ulang" beberapa saat lagi.' : 'Coba lagi dalam beberapa menit, atau isi manual di kartu bawah.');
-      errEl.textContent = msg;
-      errEl.style.display = 'block';
+      // Gagal sementara — data terakhir (kalau ada) tetap ditampilkan, auto-refresh 10 menit akan coba lagi.
+      // Tidak perlu alert merah karena sudah tidak ada tombol aksi manual untuk pengguna.
+      errEl.style.display = 'none';
     }
 
     galeriFetching = false;
