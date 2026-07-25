@@ -39,15 +39,18 @@
       <label for="txDate">Tanggal</label>
       <input type="date" id="txDate">
 
+      <label for="gramInput" id="gramLabel">Jumlah (gram)</label>
+      <input type="number" id="gramInput" placeholder="0.5" step="0.001" inputmode="decimal">
+      <select id="gramSelect" style="display:none;"></select>
+
       <div class="row2">
         <div>
-          <label for="gramInput" id="gramLabel">Jumlah (gram)</label>
-          <input type="number" id="gramInput" placeholder="0.5" step="0.001" inputmode="decimal">
-          <select id="gramSelect" style="display:none;"></select>
+          <label for="hargaBeli">Harga Beli (Rp/g)</label>
+          <input type="text" id="hargaBeli" placeholder="1.750.000" inputmode="numeric">
         </div>
         <div>
-          <label for="hargaPerGram">Harga/gram (Rp)</label>
-          <input type="text" id="hargaPerGram" placeholder="1.850.000" inputmode="numeric">
+          <label for="hargaJual">Harga Jual (Rp/g)</label>
+          <input type="text" id="hargaJual" placeholder="1.850.000" inputmode="numeric">
         </div>
       </div>
       <p id="txHargaNote" style="display:none; font-size:11.5px; color:var(--muted); margin:-8px 0 14px; line-height:1.5;"></p>
@@ -92,13 +95,9 @@
         <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5Z"/></svg>
         <span>Zakat &amp; Pajak</span>
       </li>
-      <li class="menu-item" data-view="pengaturan">
-        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 004.6 15a1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.6a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
-        <span>Pengaturan</span>
-      </li>
     </ul>
     <div class="sidebar-footer">
-      <p>Data tersimpan lokal di perangkat kamu, dan tersinkron ke Google Sheets kalau diaktifkan di Pengaturan.</p>
+      <p>Data tersimpan lokal di perangkat kamu, dan tersinkron otomatis ke Google Sheets.</p>
     </div>
   </nav>
 
@@ -332,64 +331,13 @@
         </div>
       </section>
 
-      <!-- ============ PENGATURAN ============ -->
-      <section class="view" data-view="pengaturan">
-        <div class="view-eyebrow">Sinkronisasi</div>
-        <h1 class="title">Pengaturan</h1>
-        <p class="subtitle">Hubungkan aplikasi ke Google Sheets sebagai database, supaya transaksi &amp; preferensi kamu tersimpan online dan bisa diakses dari HP mana pun.</p>
-
-        <div class="install-tip">
-          <span>🔗</span>
-          <div>URL &amp; kode rahasia sudah ditanam langsung di kode aplikasi ini, jadi setiap device otomatis tersambung tanpa perlu isi manual. Kalau kamu ingin ganti ke Spreadsheet lain, isi field di bawah — itu akan menimpa nilai bawaan khusus untuk device ini.</div>
-        </div>
-
-        <div class="card">
-          <h2>Sinkronisasi Google Sheets</h2>
-          <p class="hint">Transaksi dan preferensi (acuan dashboard, dll) akan disalin ke Spreadsheet kamu setiap ada perubahan, dan ditarik kembali setiap aplikasi dibuka.</p>
-
-          <label for="syncUrl">Web App URL</label>
-          <input type="text" id="syncUrl" placeholder="https://script.google.com/macros/s/xxxx/exec">
-
-          <label for="syncToken">Kode Rahasia (Token)</label>
-          <input type="text" id="syncToken" placeholder="kode rahasia dari script kamu">
-
-          <div class="checkrow">
-            <input type="checkbox" id="syncAutoEnabled" checked>
-            <label for="syncAutoEnabled">Sinkron otomatis setiap ada perubahan data</label>
-          </div>
-
-          <button class="btn" id="btnSyncSave" style="margin-top:4px;">Simpan &amp; Sinkronkan Sekarang</button>
-          <p id="syncStatus" style="font-size:12px; color:var(--muted); margin:12px 0 0; line-height:1.5;"></p>
-        </div>
-
-        <div class="card" id="cardShareConnection" style="display:none;">
-          <h2>Hubungkan Device Lain</h2>
-          <p class="hint">Daripada ketik ulang URL &amp; kode rahasia secara manual di HP lain, buka link ini (atau scan QR-nya) di device tersebut — otomatis terisi &amp; tersambung.</p>
-          <button class="btn btn-ghost" id="btnGenShareLink" style="margin-bottom:14px;">Buat Link &amp; QR Setup</button>
-          <div id="shareLinkBox" style="display:none;">
-            <label>Link Setup</label>
-            <div style="display:flex; gap:8px; margin-bottom:14px;">
-              <input type="text" id="shareLinkOutput" readonly style="margin-bottom:0;">
-              <button class="btn-small" id="btnCopyShareLink" style="flex:none; width:auto; padding:0 16px;">Salin</button>
-            </div>
-            <div id="shareQrBox" style="display:flex; justify-content:center; padding:16px; background:#fff; border-radius:10px;"></div>
-            <p class="tax-note" style="margin-top:14px;">Siapa pun yang punya link/QR ini bisa membaca &amp; menulis data di Spreadsheet kamu. Jangan bagikan ke orang yang tidak kamu percaya.</p>
-          </div>
-        </div>
-
-        <div class="card">
-          <h2>Reset Koneksi</h2>
-          <p class="hint">Putuskan koneksi ke Google Sheets. Data yang sudah tersimpan di Spreadsheet tidak ikut terhapus — hanya berhenti sinkron dari aplikasi ini.</p>
-          <button class="btn btn-ghost" id="btnSyncDisconnect">Putuskan Sinkronisasi</button>
-        </div>
-      </section>
 
     </div>
 
     <footer class="legal">
       Kalkulator ini bersifat edukatif dan estimatif — bukan nasihat pajak atau fatwa zakat resmi.
       Untuk kepastian, konsultasikan ke petugas pajak (DJP) atau lembaga amil zakat (mis. BAZNAS).
-      Data disimpan lokal di perangkat kamu, dan tersinkron ke Google Sheets milikmu sendiri kalau diaktifkan di menu Pengaturan.
+      Data disimpan lokal di perangkat kamu, dan tersinkron otomatis ke Google Sheets milikmu sendiri.
     </footer>
   </div>
 
