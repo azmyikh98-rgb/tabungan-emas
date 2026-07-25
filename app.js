@@ -85,9 +85,8 @@
     }
 
     updateHargaLabel();
-    setRupiahValue('hargaTx', t.hargaPerGram ?? 0);
-    showTxHargaNote('');
-    showTxTotalPreview();
+    const hargaAwal = (selectedTxBrand !== 'manual') ? t.nominal : (t.hargaPerGram ?? (t.nominal / t.gram));
+    setRupiahValue('hargaTx', hargaAwal || 0);
 
     const hasTax = t.taxAmount > 0;
     $('applyTax').checked = hasTax;
@@ -113,8 +112,6 @@
     updateHargaLabel();
     $('gramInput').value = '';
     setRupiahValue('hargaTx', 0);
-    showTxHargaNote('');
-    showTxTotalPreview();
     $('applyTax').checked = false;
     $('taxOptions').style.display = 'none';
     showFormMsg('');
@@ -260,7 +257,7 @@
 
   // ⚠️ GANTI DUA NILAI INI dengan Web App URL & kode rahasia dari Apps Script kamu sendiri.
   // Karena file ini di-hosting publik, siapa pun yang buka "View Page Source" bisa melihat nilai ini.
-  const DEFAULT_SYNC_URL = 'https://script.google.com/macros/s/AKfycbwAxYnalS_DEkYCgayKP1vU_7KX9GPCjea1NWnXQCe9XVvmASoe9Zz8qskYWTY4xcrWQg/exec';
+  const DEFAULT_SYNC_URL = 'AKfycbwAxYnalS_DEkYCgayKP1vU_7KX9GPCjea1NWnXQCe9XVvmASoe9Zz8qskYWTY4xcrWQg';
   const DEFAULT_SYNC_TOKEN = 'Tabungan-Emas16';
 
   function loadSyncConfig(){
@@ -682,7 +679,7 @@
   }
   function updateHargaLabel(){
     const label = $('hargaTxLabel');
-    if(label) label.textContent = txType === 'jual' ? 'Harga Jual (Rp/g)' : 'Harga Beli (Rp/g)';
+    if(label) label.textContent = txType === 'jual' ? 'Harga Jual (Rp)' : 'Harga Beli (Rp)';
   }
 
   seg('segType', v=>{ txType = v; updateHargaLabel(); updateTxHargaFromBrand(); });
@@ -719,15 +716,14 @@
     const gramInput = $('gramInput');
     const gramSelect = $('gramSelect');
     const label = $('gramLabel');
+    label.textContent = 'Jumlah (Gram)';
 
     if(selectedTxBrand === 'manual'){
       gramInput.style.display = 'block';
       gramSelect.style.display = 'none';
-      label.textContent = 'Jumlah (gram)';
       return;
     }
 
-    label.textContent = 'Denominasi (gram)';
     gramInput.style.display = 'none';
     gramSelect.style.display = 'block';
 
@@ -751,46 +747,22 @@
     return brandData.length ? brandData[0].weight : 1;
   }
 
-  function showTxHargaNote(msg){
-    const el = $('txHargaNote');
-    el.textContent = msg;
-    el.style.display = msg ? 'block' : 'none';
-  }
-
-  function showTxTotalPreview(){
-    const el = $('txTotalPreview');
-    const gram = getCurrentGram();
-    const harga = getRupiahValue('hargaTx');
-    if(gram && harga){
-      el.textContent = 'Estimasi total: ' + fmtRp(gram * harga);
-      el.style.display = 'block';
-    } else {
-      el.style.display = 'none';
-    }
-  }
-
   async function updateTxHargaFromBrand(){
-    if(selectedTxBrand === 'manual' || !galeriLive || !galeriLive.brands){
-      showTxHargaNote('');
-      showTxTotalPreview();
-      return;
-    }
+    if(selectedTxBrand === 'manual' || !galeriLive || !galeriLive.brands) return;
     const brandData = galeriLive.brands[selectedTxBrand] || [];
-    if(brandData.length === 0){ showTxHargaNote(''); return; }
+    if(brandData.length === 0) return;
 
     const date = $('txDate').value || todayISO();
     const refWeight = parseFloat($('gramSelect').value) || pickReferenceWeight(brandData, null);
 
-    showTxHargaNote('Mengambil harga ' + selectedTxBrand + '…');
-
     const priceField = txType === 'jual' ? 'buyback' : 'sell';
     const priceFieldHistory = txType === 'jual' ? 'buybackPrice' : 'sellPrice';
 
-    let price = null, recordedDateUsed = null;
+    let price = null;
 
     if(date === todayISO()){
       const row = brandData.find(r=> r.weight === refWeight);
-      if(row && row[priceField] > 0){ price = row[priceField]; recordedDateUsed = galeriLive.recordedDate; }
+      if(row && row[priceField] > 0){ price = row[priceField]; }
     }
 
     if(!price){
@@ -809,20 +781,14 @@
           .sort((a,b)=> new Date(b.recordedDate) - new Date(a.recordedDate));
         let match = sorted.find(r=> r.recordedDate === date);
         if(!match) match = sorted.find(r=> new Date(r.recordedDate) <= new Date(date));
-        if(match){ price = match[priceFieldHistory]; recordedDateUsed = match.recordedDate; }
-      }catch(e){ /* fall through to "no data" message below */ }
+        if(match){ price = match[priceFieldHistory]; }
+      }catch(e){ /* diamkan, biarkan field kosong untuk diisi manual */ }
     }
 
     if(price){
-      setRupiahValue('hargaTx', Math.round(price / refWeight));
-      const dateNote = (recordedDateUsed && recordedDateUsed !== date)
-        ? ' · data tanggal tepat tidak tersedia, pakai data terdekat ' + recordedDateUsed
-        : '';
-      showTxHargaNote((txType==='jual' ? 'Harga jual' : 'Harga beli') + ' otomatis dari ' + selectedTxBrand + ' (' + refWeight + ' g)' + dateNote + '. Masih bisa diubah manual.');
-    } else {
-      showTxHargaNote('Tidak ada data harga ' + selectedTxBrand + ' untuk tanggal ini — isi manual.');
+      // Harga TOTAL untuk denominasi yang dipilih (bukan dibagi per gram).
+      setRupiahValue('hargaTx', Math.round(price));
     }
-    showTxTotalPreview();
   }
 
   $('txBrandSelect').addEventListener('change', (e)=>{
@@ -832,8 +798,6 @@
   });
   $('txDate').addEventListener('change', updateTxHargaFromBrand);
   $('gramSelect').addEventListener('change', updateTxHargaFromBrand);
-  $('gramInput').addEventListener('input', showTxTotalPreview);
-  $('hargaTx').addEventListener('input', showTxTotalPreview);
 
   function showFormMsg(msg){
     const el = $('formMsg');
@@ -851,13 +815,18 @@
     const date = $('txDate').value || todayISO();
 
     const gram = getCurrentGram();
-    const hargaPerGram = getRupiahValue('hargaTx');
+    const hargaInput = getRupiahValue('hargaTx');
 
-    if(!gram || !hargaPerGram){
-      showFormMsg('Pilih/isi jumlah gram dan harga per gram dulu ya.');
+    if(!gram || !hargaInput){
+      showFormMsg('Pilih/isi jumlah gram dan harga dulu ya.');
       return;
     }
-    const nominal = gram * hargaPerGram;
+
+    // Mode merek: field harga = TOTAL untuk denominasi yang dipilih (bukan per gram).
+    // Mode manual: field harga = harga PER GRAM, dikalikan jumlah gram untuk dapat total.
+    const isBrandMode = selectedTxBrand !== 'manual';
+    const nominal = isBrandMode ? hargaInput : gram * hargaInput;
+    const hargaPerGram = nominal / gram;
 
     let taxAmount = 0, taxRate = 0;
     if($('applyTax').checked && txType==='beli'){
