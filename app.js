@@ -30,7 +30,7 @@
   $('certId').textContent = 'NO. REK — ' + Math.floor(1000+Math.random()*9000);
 
   /* ---------- Sidebar / navigation ---------- */
-  const menuLabels = {dashboard:'Dashboard', riwayat:'Transaksi', harga:'Harga Emas', zakat:'Zakat & Pajak', pengaturan:'Pengaturan'};
+  const menuLabels = {dashboard:'Dashboard', riwayat:'Transaksi', harga:'Harga Emas', zakat:'Zakat & Pajak'};
   const sidebar = $('sidebar');
   const backdrop = $('backdrop');
 
@@ -83,7 +83,8 @@
       $('gramInput').value = t.gram;
     }
 
-    setRupiahValue('hargaPerGram', t.hargaPerGram);
+    setRupiahValue('hargaBeli', t.hargaBeli ?? t.hargaPerGram ?? 0);
+    setRupiahValue('hargaJual', t.hargaJual ?? t.hargaPerGram ?? 0);
     showTxHargaNote('');
     showTxTotalPreview();
 
@@ -109,7 +110,8 @@
     selectedTxBrand = 'manual';
     updateGramFieldMode();
     $('gramInput').value = '';
-    setRupiahValue('hargaPerGram', 0);
+    setRupiahValue('hargaBeli', 0);
+    setRupiahValue('hargaJual', 0);
     showTxHargaNote('');
     showTxTotalPreview();
     $('applyTax').checked = false;
@@ -336,7 +338,9 @@
       state = json.transactions.map(t=>({
         id: Number(t.id) || Date.now() + Math.random(),
         date: t.date, type: t.type, gram: Number(t.gram),
-        hargaPerGram: Number(t.hargaPerGram), nominal: Number(t.nominal),
+        hargaBeli: Number(t.hargaBeli ?? t.hargaPerGram) || 0,
+        hargaJual: Number(t.hargaJual ?? t.hargaPerGram) || 0,
+        nominal: Number(t.nominal),
         taxRate: Number(t.taxRate) || 0, taxAmount: Number(t.taxAmount) || 0,
         brand: t.brand || 'manual'
       }));
@@ -776,7 +780,7 @@
   function showTxTotalPreview(){
     const el = $('txTotalPreview');
     const gram = getCurrentGram();
-    const harga = getRupiahValue('hargaPerGram');
+    const harga = txType === 'jual' ? getRupiahValue('hargaBeli') : getRupiahValue('hargaJual');
     if(gram && harga){
       el.textContent = 'Estimasi total: ' + fmtRp(gram * harga);
       el.style.display = 'block';
@@ -796,20 +800,21 @@
 
     const date = $('txDate').value || todayISO();
     const refWeight = parseFloat($('gramSelect').value) || pickReferenceWeight(brandData, null);
-    const priceField = txType === 'jual' ? 'buyback' : 'sell';
-    const priceFieldHistory = txType === 'jual' ? 'buybackPrice' : 'sellPrice';
-    const priceLabel = txType === 'jual' ? 'buyback' : 'jual';
 
     showTxHargaNote('Mengambil harga ' + selectedTxBrand + '…');
 
-    let price = null, recordedDateUsed = null;
+    let sell = null, buyback = null, recordedDateUsed = null;
 
     if(date === todayISO()){
       const row = brandData.find(r=> r.weight === refWeight);
-      if(row && row[priceField] > 0){ price = row[priceField]; recordedDateUsed = galeriLive.recordedDate; }
+      if(row && (row.sell > 0 || row.buyback > 0)){
+        sell = row.sell > 0 ? row.sell : null;
+        buyback = row.buyback > 0 ? row.buyback : null;
+        recordedDateUsed = galeriLive.recordedDate;
+      }
     }
 
-    if(!price){
+    if(!sell && !buyback){
       const cacheKey = selectedTxBrand + '|' + refWeight;
       try{
         let history = txHistoryCache[cacheKey];
@@ -820,24 +825,28 @@
           history = (json.success && Array.isArray(json.data)) ? json.data : [];
           txHistoryCache[cacheKey] = history;
         }
-        const sorted = history.filter(r=> r[priceFieldHistory] > 0)
+        const sorted = history.filter(r=> r.sellPrice > 0 || r.buybackPrice > 0)
           .slice()
           .sort((a,b)=> new Date(b.recordedDate) - new Date(a.recordedDate));
         let match = sorted.find(r=> r.recordedDate === date);
         if(!match) match = sorted.find(r=> new Date(r.recordedDate) <= new Date(date));
-        if(match){ price = match[priceFieldHistory]; recordedDateUsed = match.recordedDate; }
+        if(match){
+          sell = match.sellPrice > 0 ? match.sellPrice : null;
+          buyback = match.buybackPrice > 0 ? match.buybackPrice : null;
+          recordedDateUsed = match.recordedDate;
+        }
       }catch(e){ /* fall through to "no data" message below */ }
     }
 
-    if(price){
-      const perGram = Math.round(price / refWeight);
-      setRupiahValue('hargaPerGram', perGram);
+    if(sell || buyback){
+      if(sell) setRupiahValue('hargaJual', Math.round(sell / refWeight));
+      if(buyback) setRupiahValue('hargaBeli', Math.round(buyback / refWeight));
       const dateNote = (recordedDateUsed && recordedDateUsed !== date)
         ? ' · data tanggal tepat tidak tersedia, pakai data terdekat ' + recordedDateUsed
         : '';
-      showTxHargaNote('Harga ' + priceLabel + ' otomatis dari ' + selectedTxBrand + ' (' + refWeight + ' g)' + dateNote + '. Masih bisa diubah manual.');
+      showTxHargaNote('Harga jual & beli otomatis dari ' + selectedTxBrand + ' (' + refWeight + ' g)' + dateNote + '. Masih bisa diubah manual.');
     } else {
-      showTxHargaNote('Tidak ada data harga ' + priceLabel + ' ' + selectedTxBrand + ' untuk tanggal ini — isi manual.');
+      showTxHargaNote('Tidak ada data harga ' + selectedTxBrand + ' untuk tanggal ini — isi manual.');
     }
     showTxTotalPreview();
   }
@@ -850,7 +859,8 @@
   $('txDate').addEventListener('change', updateTxHargaFromBrand);
   $('gramSelect').addEventListener('change', updateTxHargaFromBrand);
   $('gramInput').addEventListener('input', showTxTotalPreview);
-  $('hargaPerGram').addEventListener('input', showTxTotalPreview);
+  $('hargaBeli').addEventListener('input', showTxTotalPreview);
+  $('hargaJual').addEventListener('input', showTxTotalPreview);
 
   function showFormMsg(msg){
     const el = $('formMsg');
@@ -868,9 +878,17 @@
     const date = $('txDate').value || todayISO();
 
     const gram = getCurrentGram();
-    const hargaPerGram = getRupiahValue('hargaPerGram');
-    if(!gram || !hargaPerGram){ showFormMsg('Pilih/isi jumlah gram dan harga per gram dulu ya.'); return; }
-    const nominal = gram * hargaPerGram;
+    const hargaBeli = getRupiahValue('hargaBeli');
+    const hargaJual = getRupiahValue('hargaJual');
+    const hargaRelevan = txType === 'jual' ? hargaBeli : hargaJual;
+
+    if(!gram || !hargaRelevan){
+      showFormMsg(txType === 'jual'
+        ? 'Pilih/isi jumlah gram dan Harga Beli dulu ya (harga yang kamu terima saat menjual).'
+        : 'Pilih/isi jumlah gram dan Harga Jual dulu ya (harga yang kamu bayar saat membeli).');
+      return;
+    }
+    const nominal = gram * hargaRelevan;
 
     let taxAmount = 0, taxRate = 0;
     if($('applyTax').checked && txType==='beli'){
@@ -883,14 +901,14 @@
       if(idx !== -1){
         state[idx] = {
           ...state[idx],
-          date, type: txType, gram, hargaPerGram, nominal,
+          date, type: txType, gram, hargaBeli, hargaJual, nominal,
           taxRate, taxAmount, brand: selectedTxBrand
         };
       }
     } else {
       state.push({
         id: Date.now(),
-        date, type: txType, gram, hargaPerGram, nominal,
+        date, type: txType, gram, hargaBeli, hargaJual, nominal,
         taxRate, taxAmount, brand: selectedTxBrand
       });
     }
@@ -1239,7 +1257,8 @@
 
   $('perhiasanDipakai').addEventListener('change', render);
 
-  attachRupiahFormatting('hargaPerGram');
+  attachRupiahFormatting('hargaBeli');
+  attachRupiahFormatting('hargaJual');
   attachRupiahFormatting('taxCalcNominal');
 
   render();
