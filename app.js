@@ -75,18 +75,9 @@
     const brandVal = t.brand && t.brand !== 'manual' ? t.brand : 'manual';
     $('txBrandSelect').value = [...$('txBrandSelect').options].some(o=> o.value===brandVal) ? brandVal : 'manual';
     selectedTxBrand = $('txBrandSelect').value;
-    updateGramFieldMode();
 
-    if(selectedTxBrand !== 'manual'){
-      const weights = [...$('gramSelect').options].map(o=> parseFloat(o.value));
-      if(weights.includes(t.gram)) $('gramSelect').value = t.gram;
-    } else {
-      $('gramInput').value = t.gram;
-    }
-
-    updateHargaLabel();
-    const hargaAwal = (selectedTxBrand !== 'manual') ? t.nominal : (t.hargaPerGram ?? (t.nominal / t.gram));
-    setRupiahValue('hargaTx', hargaAwal || 0);
+    $('gramInput').value = t.gram;
+    setRupiahValue('hargaTx', t.hargaPerGram ?? (t.nominal / t.gram) ?? 0);
 
     const hasTax = t.taxAmount > 0;
     $('applyTax').checked = hasTax;
@@ -108,14 +99,12 @@
     $('txDate').value = todayISO();
     $('txBrandSelect').value = 'manual';
     selectedTxBrand = 'manual';
-    updateGramFieldMode();
     updateHargaLabel();
     $('gramInput').value = '';
     setRupiahValue('hargaTx', 0);
     $('applyTax').checked = false;
     $('taxOptions').style.display = 'none';
     showFormMsg('');
-    updateTxHargaFromBrand();
   }
 
   $('btnOpenAddModal').addEventListener('click', ()=>{
@@ -683,7 +672,7 @@
     if(label) label.textContent = txType === 'jual' ? 'Harga Jual (Rp)' : 'Harga Beli (Rp)';
   }
 
-  seg('segType', v=>{ txType = v; updateHargaLabel(); updateTxHargaFromBrand(); });
+  seg('segType', v=>{ txType = v; updateHargaLabel(); });
   seg('segNpwp', v=> npwp = v);
   seg('segTaxCalc', v=>{ taxCalcNpwp = v; renderTaxCalc(); });
   seg('segZakatPajakTab', v=>{
@@ -695,9 +684,9 @@
     $('taxOptions').style.display = e.target.checked ? 'block':'none';
   });
 
-  /* ---------- Auto-fill harga/gram in modal from brand + date ---------- */
+  /* ---------- Merek Emas: hanya untuk kategorisasi & valuasi "Nilai Sekarang", ---------- */
+  /* ---------- TIDAK menarik harga live ke form transaksi (sepenuhnya manual). ---------- */
   let selectedTxBrand = 'manual';
-  const txHistoryCache = {};
 
   function populateTxBrandSelect(){
     const sel = $('txBrandSelect');
@@ -710,103 +699,11 @@
     sel.innerHTML = options;
     sel.value = [...sel.options].some(o=> o.value===current) ? current : 'manual';
     selectedTxBrand = sel.value;
-    updateGramFieldMode();
-  }
-
-  function updateGramFieldMode(){
-    const gramInput = $('gramInput');
-    const gramSelect = $('gramSelect');
-    const label = $('gramLabel');
-    label.textContent = 'Jumlah (Gram)';
-
-    if(selectedTxBrand === 'manual'){
-      gramInput.style.display = 'block';
-      gramSelect.style.display = 'none';
-      return;
-    }
-
-    gramInput.style.display = 'none';
-    gramSelect.style.display = 'block';
-
-    const brandData = galeriLive.brands[selectedTxBrand] || [];
-    const weights = [...new Set(brandData.map(r=> r.weight))].sort((a,b)=> a-b);
-    const currentVal = parseFloat(gramSelect.value);
-    gramSelect.innerHTML = weights.map(w=> `<option value="${w}">${w} g</option>`).join('');
-    if(weights.includes(currentVal)) gramSelect.value = currentVal;
-    else {
-      const withStock = brandData.filter(r=> r.sell>0).map(r=> r.weight);
-      gramSelect.value = withStock.includes(1) ? 1 : (withStock[0] ?? weights[0]);
-    }
-  }
-
-  function pickReferenceWeight(brandData, preferredWeight){
-    const withStock = brandData.filter(r=> r.sell>0);
-    if(preferredWeight && withStock.some(r=> r.weight===preferredWeight)) return preferredWeight;
-    const one = withStock.find(r=> r.weight===1);
-    if(one) return 1;
-    if(withStock.length) return withStock[0].weight;
-    return brandData.length ? brandData[0].weight : 1;
-  }
-
-  async function updateTxHargaFromBrand(){
-    if(selectedTxBrand === 'manual'){
-      const date = $('txDate').value || todayISO();
-      if(date === todayISO()){
-        if(!liveGold){ await fetchLiveGold(); }
-        if(liveGold){ setRupiahValue('hargaTx', Math.round(liveGold.idrPerGram)); }
-      }
-      return;
-    }
-    if(!galeriLive || !galeriLive.brands) return;
-    const brandData = galeriLive.brands[selectedTxBrand] || [];
-    if(brandData.length === 0) return;
-
-    const date = $('txDate').value || todayISO();
-    const refWeight = parseFloat($('gramSelect').value) || pickReferenceWeight(brandData, null);
-
-    const priceField = txType === 'jual' ? 'buyback' : 'sell';
-    const priceFieldHistory = txType === 'jual' ? 'buybackPrice' : 'sellPrice';
-
-    let price = null;
-
-    if(date === todayISO()){
-      const row = brandData.find(r=> r.weight === refWeight);
-      if(row && row[priceField] > 0){ price = row[priceField]; }
-    }
-
-    if(!price){
-      const cacheKey = selectedTxBrand + '|' + refWeight;
-      try{
-        let history = txHistoryCache[cacheKey];
-        if(!history){
-          const target = 'https://logam-mulia-api.iamutaki.workers.dev/api/prices/galeri24/history?materialType=' +
-            encodeURIComponent(selectedTxBrand) + '&weight=' + refWeight + '&length=1000';
-          const json = await fetchJsonViaProxies(target);
-          history = (json.success && Array.isArray(json.data)) ? json.data : [];
-          txHistoryCache[cacheKey] = history;
-        }
-        const sorted = history.filter(r=> r[priceFieldHistory] > 0)
-          .slice()
-          .sort((a,b)=> new Date(b.recordedDate) - new Date(a.recordedDate));
-        let match = sorted.find(r=> r.recordedDate === date);
-        if(!match) match = sorted.find(r=> new Date(r.recordedDate) <= new Date(date));
-        if(match){ price = match[priceFieldHistory]; }
-      }catch(e){ /* diamkan, biarkan field kosong untuk diisi manual */ }
-    }
-
-    if(price){
-      // Harga TOTAL untuk denominasi yang dipilih (bukan dibagi per gram).
-      setRupiahValue('hargaTx', Math.round(price));
-    }
   }
 
   $('txBrandSelect').addEventListener('change', (e)=>{
     selectedTxBrand = e.target.value;
-    updateGramFieldMode();
-    updateTxHargaFromBrand();
   });
-  $('txDate').addEventListener('change', updateTxHargaFromBrand);
-  $('gramSelect').addEventListener('change', updateTxHargaFromBrand);
 
   function showFormMsg(msg){
     const el = $('formMsg');
@@ -815,7 +712,6 @@
   }
 
   function getCurrentGram(){
-    if(selectedTxBrand !== 'manual') return parseFloat($('gramSelect').value);
     return parseFloat($('gramInput').value);
   }
 
@@ -824,18 +720,13 @@
     const date = $('txDate').value || todayISO();
 
     const gram = getCurrentGram();
-    const hargaInput = getRupiahValue('hargaTx');
+    const hargaPerGram = getRupiahValue('hargaTx');
 
-    if(!gram || !hargaInput){
-      showFormMsg('Pilih/isi jumlah gram dan harga dulu ya.');
+    if(!gram || !hargaPerGram){
+      showFormMsg('Isi jumlah gram dan harga per gram dulu ya.');
       return;
     }
-
-    // Mode merek: field harga = TOTAL untuk denominasi yang dipilih (bukan per gram).
-    // Mode manual: field harga = harga PER GRAM, dikalikan jumlah gram untuk dapat total.
-    const isBrandMode = selectedTxBrand !== 'manual';
-    const nominal = isBrandMode ? hargaInput : gram * hargaInput;
-    const hargaPerGram = nominal / gram;
+    const nominal = gram * hargaPerGram;
 
     let taxAmount = 0, taxRate = 0;
     if($('applyTax').checked && txType==='beli'){
