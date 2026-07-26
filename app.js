@@ -1,7 +1,7 @@
 (function(){
   const $ = id => document.getElementById(id);
   const fmtRp = n => 'Rp ' + Math.round(n).toLocaleString('id-ID');
-  const fmtGram = n => n.toLocaleString('id-ID',{minimumFractionDigits:3, maximumFractionDigits:3});
+  const fmtGram = n => n.toLocaleString('id-ID',{minimumFractionDigits:2, maximumFractionDigits:8});
   const todayISO = () => new Date().toISOString().slice(0,10);
 
   function parseRupiah(str){
@@ -115,6 +115,7 @@
     $('applyTax').checked = false;
     $('taxOptions').style.display = 'none';
     showFormMsg('');
+    updateTxHargaFromBrand();
   }
 
   $('btnOpenAddModal').addEventListener('click', ()=>{
@@ -257,7 +258,7 @@
 
   // ⚠️ GANTI DUA NILAI INI dengan Web App URL & kode rahasia dari Apps Script kamu sendiri.
   // Karena file ini di-hosting publik, siapa pun yang buka "View Page Source" bisa melihat nilai ini.
-  const DEFAULT_SYNC_URL = 'AKfycbwAxYnalS_DEkYCgayKP1vU_7KX9GPCjea1NWnXQCe9XVvmASoe9Zz8qskYWTY4xcrWQg';
+  const DEFAULT_SYNC_URL = 'https://script.google.com/macros/s/AKfycbwAxYnalS_DEkYCgayKP1vU_7KX9GPCjea1NWnXQCe9XVvmASoe9Zz8qskYWTY4xcrWQg/exec';
   const DEFAULT_SYNC_TOKEN = 'Tabungan-Emas16';
 
   function loadSyncConfig(){
@@ -701,7 +702,7 @@
   function populateTxBrandSelect(){
     const sel = $('txBrandSelect');
     const current = sel.value || 'manual';
-    let options = '<option value="manual">Manual (isi sendiri)</option>';
+    let options = '<option value="manual">Digital Pegadaian</option>';
     if(galeriLive && galeriLive.brands){
       const names = sortBrandNames(Object.keys(galeriLive.brands));
       options += names.map(n=> `<option value="${n}">${n}</option>`).join('');
@@ -748,7 +749,15 @@
   }
 
   async function updateTxHargaFromBrand(){
-    if(selectedTxBrand === 'manual' || !galeriLive || !galeriLive.brands) return;
+    if(selectedTxBrand === 'manual'){
+      const date = $('txDate').value || todayISO();
+      if(date === todayISO()){
+        if(!liveGold){ await fetchLiveGold(); }
+        if(liveGold){ setRupiahValue('hargaTx', Math.round(liveGold.idrPerGram)); }
+      }
+      return;
+    }
+    if(!galeriLive || !galeriLive.brands) return;
     const brandData = galeriLive.brands[selectedTxBrand] || [];
     if(brandData.length === 0) return;
 
@@ -1041,7 +1050,7 @@
     if(brandCanvas){
       const map = {};
       state.forEach(t=>{
-        const b = (t.brand && t.brand !== 'manual') ? t.brand : 'Manual';
+        const b = (t.brand && t.brand !== 'manual') ? t.brand : 'Digital Pegadaian';
         map[b] = (map[b] || 0) + (t.type==='beli' ? t.gram : -t.gram);
       });
       const entries = Object.entries(map).filter(([,v])=> v > 0.0005);
@@ -1076,7 +1085,7 @@
                 callbacks:{
                   label: (ctx)=>{
                     const gram = ctx.parsed;
-                    const brandKey = ctx.label === 'Manual' ? 'manual' : ctx.label;
+                    const brandKey = ctx.label === 'Digital Pegadaian' ? 'manual' : ctx.label;
                     const nilai = gram * getBrandCurrentPricePerGram(brandKey);
                     return [ctx.label + ': ' + fmtGram(gram) + ' g', 'Nilai sekarang: ' + fmtRp(nilai)];
                   }
@@ -1109,7 +1118,7 @@
     const brandsInTab = [...new Set(state.filter(t=> t.type===txTabFilter).map(t=> t.brand || 'manual'))];
     const namedBrands = sortBrandNames(brandsInTab.filter(b=> b!=='manual'));
     let options = '<option value="semua">Semua Merek</option>';
-    if(brandsInTab.includes('manual')) options += '<option value="manual">Manual</option>';
+    if(brandsInTab.includes('manual')) options += '<option value="manual">Digital Pegadaian</option>';
     options += namedBrands.map(b=> `<option value="${b}">${b}</option>`).join('');
     sel.innerHTML = options;
     sel.value = [...sel.options].some(o=> o.value===current) ? current : 'semua';
@@ -1132,19 +1141,25 @@
     populateTxBrandFilter();
     const filtered = getFilteredTx();
 
-    let totalGram = 0, totalNominal = 0, totalNilai = 0;
-    filtered.forEach(t=>{
-      totalGram += t.gram;
-      totalNominal += t.nominal + (t.taxAmount || 0);
-      totalNilai += t.gram * getBrandCurrentPricePerGram(t.brand);
-    });
+    const summaryCard = $('txSummaryCard');
+    if(txTabFilter === 'jual'){
+      summaryCard.style.display = 'none';
+    } else {
+      summaryCard.style.display = 'block';
+      let totalGram = 0, totalNominal = 0, totalNilai = 0;
+      filtered.forEach(t=>{
+        totalGram += t.gram;
+        totalNominal += t.nominal + (t.taxAmount || 0);
+        totalNilai += t.gram * getBrandCurrentPricePerGram(t.brand);
+      });
 
-    $('txSummaryLabel1').textContent = txTabFilter === 'beli' ? 'Modal Ditanam' : 'Total Diterima';
-    $('txSummaryModal').textContent = fmtRp(totalNominal);
-    $('txSummaryNilai').textContent = fmtRp(totalNilai);
-    $('txSummarySource').textContent = totalGram > 0
-      ? 'Estimasi dari ' + fmtGram(totalGram) + ' g, harga live per merek'
-      : '';
+      $('txSummaryLabel1').textContent = 'Modal Ditanam';
+      $('txSummaryModal').textContent = fmtRp(totalNominal);
+      $('txSummaryNilai').textContent = fmtRp(totalNilai);
+      $('txSummarySource').textContent = totalGram > 0
+        ? 'Estimasi dari ' + fmtGram(totalGram) + ' g, harga live per merek'
+        : '';
+    }
 
     const listEl = $('txList');
     if(filtered.length === 0){
@@ -1153,7 +1168,7 @@
     }
 
     listEl.innerHTML = [...filtered].reverse().map(t=>{
-      const brandLabel = (t.brand && t.brand !== 'manual') ? t.brand : 'Manual';
+      const brandLabel = (t.brand && t.brand !== 'manual') ? t.brand : 'Digital Pegadaian';
       return `
         <div class="tx">
           <div class="tx-left">
