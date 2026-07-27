@@ -300,7 +300,7 @@
   }
 
   async function syncPush(){
-    if(!isSyncConfigured() || !syncConfig.autoSync || syncing) return;
+    if(!isSyncConfigured() || !syncConfig.autoSync) return;
     try{
       const res = await fetch(syncConfig.url, {
         method:'POST',
@@ -318,9 +318,11 @@
         saveSyncConfigLocal();
         showSyncStatus('Tersinkron ' + new Date(syncConfig.lastSync).toLocaleString('id-ID',{dateStyle:'medium', timeStyle:'short'}));
       } else {
+        console.error('[sync] push gagal:', json.error);
         showSyncStatus('Gagal sinkron: ' + (json.error || 'tidak diketahui'), true);
       }
     }catch(e){
+      console.error('[sync] push error:', e);
       showSyncStatus('Gagal terhubung ke Google Sheets. Cek URL dan koneksi internet.', true);
     }
   }
