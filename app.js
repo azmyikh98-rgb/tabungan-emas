@@ -75,7 +75,12 @@
     const brandVal = t.brand && t.brand !== 'manual' ? t.brand : 'manual';
     $('txBrandSelect').value = [...$('txBrandSelect').options].some(o=> o.value===brandVal) ? brandVal : 'manual';
     selectedTxBrand = $('txBrandSelect').value;
+    updateGramFieldMode();
 
+    if(selectedTxBrand !== 'manual' && $('gramSelect').style.display !== 'none'){
+      const weights = [...$('gramSelect').options].map(o=> parseFloat(o.value));
+      if(weights.includes(t.gram)) $('gramSelect').value = t.gram;
+    }
     $('gramInput').value = t.gram;
     setRupiahValue('hargaTx', t.hargaPerGram ?? (t.nominal / t.gram) ?? 0);
 
@@ -99,6 +104,7 @@
     $('txDate').value = todayISO();
     $('txBrandSelect').value = 'manual';
     selectedTxBrand = 'manual';
+    updateGramFieldMode();
     updateHargaLabel();
     $('gramInput').value = '';
     setRupiahValue('hargaTx', 0);
@@ -699,10 +705,34 @@
     sel.innerHTML = options;
     sel.value = [...sel.options].some(o=> o.value===current) ? current : 'manual';
     selectedTxBrand = sel.value;
+    updateGramFieldMode();
+  }
+
+  // Dropdown gram mengikuti denominasi resmi merek yang dipilih — HANYA untuk kemudahan
+  // mencatat berat yang akurat, TIDAK memicu penarikan/pengisian harga apa pun.
+  function updateGramFieldMode(){
+    const gramInput = $('gramInput');
+    const gramSelect = $('gramSelect');
+
+    if(selectedTxBrand === 'manual' || !galeriLive || !galeriLive.brands || !galeriLive.brands[selectedTxBrand]){
+      gramInput.style.display = 'block';
+      gramSelect.style.display = 'none';
+      return;
+    }
+
+    gramInput.style.display = 'none';
+    gramSelect.style.display = 'block';
+
+    const brandData = galeriLive.brands[selectedTxBrand] || [];
+    const weights = [...new Set(brandData.map(r=> r.weight))].sort((a,b)=> a-b);
+    const currentVal = parseFloat(gramSelect.value);
+    gramSelect.innerHTML = weights.map(w=> `<option value="${w}">${w} g</option>`).join('');
+    gramSelect.value = weights.includes(currentVal) ? currentVal : (weights[0] ?? '');
   }
 
   $('txBrandSelect').addEventListener('change', (e)=>{
     selectedTxBrand = e.target.value;
+    updateGramFieldMode();
   });
 
   function showFormMsg(msg){
@@ -712,6 +742,9 @@
   }
 
   function getCurrentGram(){
+    if(selectedTxBrand !== 'manual' && $('gramSelect').style.display !== 'none'){
+      return parseFloat($('gramSelect').value);
+    }
     return parseFloat($('gramInput').value);
   }
 
