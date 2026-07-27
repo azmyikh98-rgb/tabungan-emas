@@ -4,6 +4,18 @@
   const fmtGram = n => n.toLocaleString('id-ID',{minimumFractionDigits:2, maximumFractionDigits:8});
   const todayISO = () => new Date().toISOString().slice(0,10);
 
+  // Google Sheets kadang otomatis mengubah tanggal jadi datetime penuh (mis. "2026-07-26T00:00:00.000Z")
+  // saat sinkron. <input type="date"> hanya menerima format murni "YYYY-MM-DD", jadi kita normalisasi dulu.
+  function normalizeDateStr(d){
+    if(!d) return '';
+    const str = String(d);
+    const match = str.match(/^(\d{4}-\d{2}-\d{2})/);
+    if(match) return match[1];
+    const parsed = new Date(str);
+    if(!isNaN(parsed.getTime())) return parsed.toISOString().slice(0,10);
+    return str;
+  }
+
   function parseRupiah(str){
     if(!str) return 0;
     const digits = String(str).replace(/[^0-9]/g, '');
@@ -70,7 +82,7 @@
     txType = t.type;
     updateHargaLabel();
 
-    $('txDate').value = t.date;
+    $('txDate').value = normalizeDateStr(t.date);
 
     const brandVal = t.brand && t.brand !== 'manual' ? t.brand : 'manual';
     $('txBrandSelect').value = [...$('txBrandSelect').options].some(o=> o.value===brandVal) ? brandVal : 'manual';
@@ -323,7 +335,7 @@
     if(Array.isArray(json.transactions)){
       state = json.transactions.map(t=>({
         id: Number(t.id) || Date.now() + Math.random(),
-        date: t.date, type: t.type, gram: Number(t.gram),
+        date: normalizeDateStr(t.date), type: t.type, gram: Number(t.gram),
         hargaPerGram: Number(t.hargaPerGram ?? t.hargaJual ?? t.hargaBeli) || 0,
         nominal: Number(t.nominal),
         taxRate: Number(t.taxRate) || 0, taxAmount: Number(t.taxAmount) || 0,
