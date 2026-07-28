@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tabungan-emas-v2';
+const CACHE_NAME = 'tabungan-emas-v3';
 const APP_SHELL = [
   './index.html',
   './style.css',
@@ -33,19 +33,17 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // App shell: cache-first, fall back to network, then update cache.
+  // App shell: network-first (selalu ambil versi terbaru kalau online),
+  // fallback ke cache HANYA kalau benar-benar offline/network gagal.
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      const networkFetch = fetch(event.request)
-        .then((res) => {
-          if (res && res.ok) {
-            const clone = res.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-          }
-          return res;
-        })
-        .catch(() => cached);
-      return cached || networkFetch;
-    })
+    fetch(event.request)
+      .then((res) => {
+        if (res && res.ok) {
+          const clone = res.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+        }
+        return res;
+      })
+      .catch(() => caches.match(event.request))
   );
 });
