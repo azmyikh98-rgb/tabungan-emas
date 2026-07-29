@@ -614,12 +614,13 @@
 
   const GALERI_TARGET_URL = 'https://logam-mulia-api.iamutaki.workers.dev/api/prices/galeri24';
   const CORS_PROXIES = [
+    (url)=> url, // coba akses langsung dulu (siapa tahu CORS-nya sebenarnya sudah diizinkan)
     (url)=> 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url),
     (url)=> 'https://api.codetabs.com/v1/proxy/?quest=' + encodeURIComponent(url)
   ];
 
   async function fetchJsonViaProxies(targetUrl, timeoutMs){
-    const perProxyTimeout = timeoutMs || 7000;
+    const perProxyTimeout = timeoutMs || 6000;
     let lastErr;
     for(const buildUrl of CORS_PROXIES){
       const controller = new AbortController();
