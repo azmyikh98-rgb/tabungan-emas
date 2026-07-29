@@ -94,7 +94,7 @@
       if(weights.includes(t.gram)) $('gramSelect').value = t.gram;
     }
     $('gramInput').value = t.gram;
-    setRupiahValue('hargaTx', t.hargaPerGram ?? (t.nominal / t.gram) ?? 0);
+    setRupiahValue('hargaTx', t.nominal ?? 0);
 
     const hasTax = t.taxAmount > 0;
     $('applyTax').checked = hasTax;
@@ -338,8 +338,7 @@
       state = json.transactions.map(t=>({
         id: Number(t.id) || Date.now() + Math.random(),
         date: normalizeDateStr(t.date), type: t.type, gram: Number(t.gram),
-        hargaPerGram: Number(t.hargaPerGram ?? t.hargaJual ?? t.hargaBeli) || 0,
-        nominal: Number(t.nominal),
+        nominal: Number(t.nominal ?? t.hargaJual ?? t.hargaBeli) || 0,
         taxRate: Number(t.taxRate) || 0, taxAmount: Number(t.taxAmount) || 0,
         brand: t.brand || 'manual'
       }));
@@ -767,13 +766,12 @@
     const date = $('txDate').value || todayISO();
 
     const gram = getCurrentGram();
-    const hargaPerGram = getRupiahValue('hargaTx');
+    const nominal = getRupiahValue('hargaTx');
 
-    if(!gram || !hargaPerGram){
-      showFormMsg('Isi jumlah gram dan harga per gram dulu ya.');
+    if(!gram || !nominal){
+      showFormMsg('Isi jumlah gram dan harga (nominal total) dulu ya.');
       return;
     }
-    const nominal = gram * hargaPerGram;
 
     let taxAmount = 0, taxRate = 0;
     if($('applyTax').checked && txType==='beli'){
@@ -786,14 +784,14 @@
       if(idx !== -1){
         state[idx] = {
           ...state[idx],
-          date, type: txType, gram, hargaPerGram, nominal,
+          date, type: txType, gram, nominal,
           taxRate, taxAmount, brand: selectedTxBrand
         };
       }
     } else {
       state.push({
         id: Date.now(),
-        date, type: txType, gram, hargaPerGram, nominal,
+        date, type: txType, gram, nominal,
         taxRate, taxAmount, brand: selectedTxBrand
       });
     }
