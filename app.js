@@ -618,15 +618,21 @@
     (url)=> 'https://api.codetabs.com/v1/proxy/?quest=' + encodeURIComponent(url)
   ];
 
-  async function fetchJsonViaProxies(targetUrl, signal){
+  async function fetchJsonViaProxies(targetUrl, timeoutMs){
+    const perProxyTimeout = timeoutMs || 7000;
     let lastErr;
     for(const buildUrl of CORS_PROXIES){
+      const controller = new AbortController();
+      const timer = setTimeout(()=> controller.abort(), perProxyTimeout);
       try{
-        const res = await fetch(buildUrl(targetUrl), {signal});
+        const res = await fetch(buildUrl(targetUrl), {signal: controller.signal});
+        clearTimeout(timer);
         if(!res.ok) throw new Error('status ' + res.status);
         return await res.json();
       }catch(e){
+        clearTimeout(timer);
         lastErr = e;
+        // lanjut ke proxy berikutnya dengan controller & timeout yang baru/segar
       }
     }
     throw lastErr || new Error('Semua proxy gagal');
@@ -639,10 +645,7 @@
 
     const errEl = $('galeriError');
     try{
-      const controller = new AbortController();
-      const timeout = setTimeout(()=> controller.abort(), 15000);
-      const json = await fetchJsonViaProxies(GALERI_TARGET_URL, controller.signal);
-      clearTimeout(timeout);
+      const json = await fetchJsonViaProxies(GALERI_TARGET_URL);
       if(!json.success || !Array.isArray(json.data)) throw new Error('format tidak dikenali');
 
       const brands = {};
