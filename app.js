@@ -111,13 +111,14 @@
   txModalBackdrop.addEventListener('click', closeTxModal);
   $('btnCloseModal').addEventListener('click', closeTxModal);
   function resetTxFormFields(){
-    document.querySelectorAll('#segType button').forEach(b=> b.classList.toggle('active', b.dataset.val==='beli'));
-    txType = 'beli';
+    const defaultType = (typeof txTabFilter !== 'undefined' && txTabFilter === 'jual') ? 'jual' : 'beli';
+    document.querySelectorAll('#segType button').forEach(b=> b.classList.toggle('active', b.dataset.val===defaultType));
+    txType = defaultType;
+    updateHargaLabel();
     $('txDate').value = todayISO();
     $('txBrandSelect').value = 'manual';
     selectedTxBrand = 'manual';
     updateGramFieldMode();
-    updateHargaLabel();
     $('gramInput').value = '';
     setRupiahValue('hargaTx', 0);
     $('applyTax').checked = false;
