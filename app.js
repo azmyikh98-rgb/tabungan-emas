@@ -617,23 +617,28 @@
   const CORS_PROXIES = [
     (url)=> url, // coba akses langsung dulu (siapa tahu CORS-nya sebenarnya sudah diizinkan)
     (url)=> 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url),
-    (url)=> 'https://api.codetabs.com/v1/proxy/?quest=' + encodeURIComponent(url)
+    (url)=> 'https://api.codetabs.com/v1/proxy/?quest=' + encodeURIComponent(url),
+    (url)=> 'https://cors.x2u.in/' + url
   ];
 
   async function fetchJsonViaProxies(targetUrl, timeoutMs){
-    const perProxyTimeout = timeoutMs || 6000;
+    const perProxyTimeout = timeoutMs || 5000;
     let lastErr;
     for(const buildUrl of CORS_PROXIES){
+      const attemptUrl = buildUrl(targetUrl);
       const controller = new AbortController();
       const timer = setTimeout(()=> controller.abort(), perProxyTimeout);
       try{
-        const res = await fetch(buildUrl(targetUrl), {signal: controller.signal});
+        const res = await fetch(attemptUrl, {signal: controller.signal});
         clearTimeout(timer);
         if(!res.ok) throw new Error('status ' + res.status);
-        return await res.json();
+        const json = await res.json();
+        console.log('[galeri24] berhasil lewat:', attemptUrl.split('?')[0]);
+        return json;
       }catch(e){
         clearTimeout(timer);
         lastErr = e;
+        console.warn('[galeri24] gagal lewat:', attemptUrl.split('?')[0], '-', e.message);
         // lanjut ke proxy berikutnya dengan controller & timeout yang baru/segar
       }
     }
