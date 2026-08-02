@@ -266,8 +266,8 @@
 
   // ⚠️ GANTI DUA NILAI INI dengan Web App URL & kode rahasia dari Apps Script kamu sendiri.
   // Karena file ini di-hosting publik, siapa pun yang buka "View Page Source" bisa melihat nilai ini.
-  const DEFAULT_SYNC_URL = 'https://script.google.com/macros/s/AKfycbwAxYnalS_DEkYCgayKP1vU_7KX9GPCjea1NWnXQCe9XVvmASoe9Zz8qskYWTY4xcrWQg/exec';
-  const DEFAULT_SYNC_TOKEN = 'Tabungan-Emas16';
+  const DEFAULT_SYNC_URL = 'TEMPEL_WEB_APP_URL_KAMU_DI_SINI';
+  const DEFAULT_SYNC_TOKEN = 'TEMPEL_KODE_RAHASIA_KAMU_DI_SINI';
 
   function loadSyncConfig(){
     try{
@@ -420,6 +420,21 @@
     }
     syncing = false;
   }
+
+  async function triggerManualSync(){
+    if(!isSyncConfigured()){
+      showSyncStatus('Sinkronisasi belum dikonfigurasi.', true);
+      return;
+    }
+    const btns = [$('btnManualSync'), $('btnManualSyncSidebar')].filter(Boolean);
+    btns.forEach(b=>{ b.classList.add('spinning'); b.disabled = true; });
+    await connectSync();
+    btns.forEach(b=>{ b.classList.remove('spinning'); b.disabled = false; });
+  }
+  const btnManualSync = $('btnManualSync');
+  if(btnManualSync) btnManualSync.addEventListener('click', triggerManualSync);
+  const btnManualSyncSidebar = $('btnManualSyncSidebar');
+  if(btnManualSyncSidebar) btnManualSyncSidebar.addEventListener('click', triggerManualSync);
 
   function populateSyncFields(){
     if($('syncUrl')) $('syncUrl').value = syncConfig.url || '';
